@@ -1,0 +1,107 @@
+# Pocket Ledger
+
+A personal finance and net-worth tracker. It tracks income, expenses, cash, bank and
+savings balances, assets, money lent or invested, and debts, and shows your real net
+worth at any point in time.
+
+Under the hood every transaction is **double-entry**: money always moves *from* one
+account *to* another, so balances always reconcile. You never have to think in
+debits and credits; you fill in a simple form and the app records both sides.
+
+> Status: **Phase 0 (setup)** is complete. See [CHANGELOG.md](CHANGELOG.md) and the
+> full plan in [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md).
+
+---
+
+## Running it on your laptop
+
+You need **Node.js 20+** installed.
+
+```bash
+npm install          # first time only: downloads the libraries
+npm run db:deploy    # first time only: creates your database in ./data
+npm run dev          # starts the app
+```
+
+Then open **http://localhost:3000**. The very first time, it asks you to create the
+**admin** account (that's you).
+
+### Recording videos with fake data
+
+Your real database is `data/pocket-ledger.db`. For videos, use a separate demo
+database full of made-up people:
+
+```bash
+npm run seed:demo    # (re)builds data/demo.db with fake users
+npm run dev:demo     # runs the app on the demo database
+```
+
+Demo logins (all fake):
+
+| Name | Email | Username | Password | PIN |
+|---|---|---|---|---|
+| Nimal Perera (admin) | nimal@demo.test | nimal | demo-pass-1 | 2580 |
+| Kumari Perera | kumari@demo.test | kumari | demo-pass-2 | 1470 |
+
+### Other useful commands
+
+| Command | What it does |
+|---|---|
+| `npm test` | Runs the automated tests (uses its own throw-away database) |
+| `npm run typecheck` | Checks the code for type mistakes |
+| `npm run lint` | Checks code style |
+| `npm run build` | Makes a production build (the way it would run on a server) |
+| `npm run db:studio` | Opens a viewer for the database |
+
+---
+
+## How sign-in and privacy work
+
+- **Separate data per person.** Each person has their own login and sees only their
+  own data. This is enforced on the server: feature code reads the database through a
+  "scoped" client that automatically adds *only this user's records* to every query.
+  A test proves user A can't read or change user B's data.
+- **Invite-only.** After the admin account exists, new people need an **invite
+  code** (Settings → Invites). Codes work once and expire after 7 days.
+- **Passwords and PINs are never stored**, only argon2 hashes, a one-way
+  scramble that even someone who copies the database can't reverse.
+- **Lockout.** 5 wrong passwords lock the account for 15 minutes. Too many failed
+  attempts from one device are also blocked.
+- **Quick unlock with a PIN.** After signing in once on a device you can set a 4–6
+  digit PIN. 5 wrong PINs means you must use your password.
+- **Auto-lock.** The app locks after 10 minutes without use (change it in Settings).
+- **Lock / Switch user.** *Lock* shows the PIN screen. *Switch user* shows everyone
+  signed in on this device (e.g. husband and wife on one computer), and each person
+  unlocks with their own PIN. *Sign out* forgets the login on this device.
+- Cookies are `httpOnly` (page scripts can't read them) and become `secure`
+  (HTTPS-only) automatically when `APP_URL` starts with `https://`.
+
+## Install it like an app (PWA)
+
+In production mode (`npm run build` then `npm start`), Chrome or Edge shows an
+**Install** icon in the address bar. On a phone, use **Add to Home screen**. (Phone
+install needs the app hosted with HTTPS, which comes in Phase 8.)
+
+## What is kept out of GitHub
+
+`.gitignore` blocks: the `data/` folder (all databases), `.env`, uploads, backups,
+exports, and **every** `.xlsx`, `.xls` and `.csv` file, so your real budget file can't
+be committed by accident.
+
+## Tech used
+
+Next.js 16 (App Router) + TypeScript · Tailwind CSS 4 + shadcn/ui · Prisma 7 with
+SQLite (PostgreSQL later) · argon2 password hashing · Vitest for tests.
+
+## Project layout
+
+```
+prisma/schema.prisma      database design
+src/app/(auth)/           sign-in, setup, register, lock, switch-user screens
+src/app/(app)/            the app itself (home, accounts, history, registers, settings)
+src/lib/auth/             sign-in, sessions, PIN, lockout rules
+src/lib/db/               database client + the per-user "scoped" client
+src/lib/format.ts         money (stored as whole cents) and dd/MM/yyyy dates
+tests/                    automated tests
+scripts/seed-demo.ts      fake demo data
+```

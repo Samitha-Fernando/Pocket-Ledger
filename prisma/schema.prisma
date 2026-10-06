@@ -1,0 +1,101 @@
+// Pocket Ledger database schema.
+// Runs on SQLite locally; written to stay portable to PostgreSQL (Phase 8).
+// Rule: every table holding a user's data has a `userId` column and must be
+// listed in USER_OWNED_MODELS (src/lib/db/scoped.ts). A test enforces this.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  username         String?   @unique
+  name             String
+  passwordHash     String
+  pinHash          String?
+  role             Role      @default(USER)
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
+
+  // Per-user settings
+  autoLockMinutes Int    @default(10)
+  currency        String @default("LKR")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions       Session[]
+  invitesCreated Invite[]   @relation("InviteCreatedBy")
+  inviteUsed     Invite?    @relation("InviteUsedBy")
+  auditLogs      AuditLog[]
+}
+
+// One row per user per device ("remembered login"). The device can be
+// quick-unlocked with a PIN while the session is alive.
+model Session {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceHash     String
+  tokenHash      String   @unique
+  locked         Boolean  @default(false)
+  pinFailedCount Int      @default(0)
+  lastActiveAt   DateTime @default(now())
+  expiresAt      DateTime
+  userAgent      String?
+  createdAt      DateTime @default(now())
+
+  @@unique([deviceHash, userId])
+  @@index([deviceHash])
+}
+
+model Invite {
+  id          String    @id @default(cuid())
+  codeHash    String    @unique
+  note        String?
+  email       String?
+  createdById String
+  createdBy   User      @relation("InviteCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  expiresAt   DateTime
+  usedAt      DateTime?
+  usedById    String?   @unique
+  usedBy      User?     @relation("InviteUsedBy", fields: [usedById], references: [id], onDelete: SetNull)
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+// Used for rate limiting sign-in / registration attempts by IP address.
+model LoginAttempt {
+  id         String   @id @default(cuid())
+  ip         String
+  kind       String // "login" | "unlock" | "register"
+  identifier String?
+  success    Boolean
+  createdAt  DateTime @default(now())
+
+  @@index([ip, kind, createdAt])
+}
+
+// Per-user activity log (security events now; data changes in later phases).
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    String
+  details   String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
