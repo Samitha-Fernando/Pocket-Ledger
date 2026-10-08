@@ -2,6 +2,37 @@
 
 All notable changes, in plain English. Newest first.
 
+## Phase 1: Accounts & core transactions (2026-10-06)
+
+### Added
+- **Double-entry engine**: every transaction is saved as lines that add up to zero;
+  anything unbalanced is refused. Balances are always calculated, never typed in.
+- **Starting list of accounts** for every user: Cash in hand, Bank account, Savings
+  account, AIA Emergency Fund, 5 income categories, 14 expense categories, plus a
+  behind-the-scenes Opening Balances account.
+- **Accounts screen**: your money with live balances, this month's income and
+  expenses per category, archived accounts. Tapping an account shows its
+  transactions with a running balance.
+- **Add / edit accounts**: add an account or category (with an optional starting
+  balance), rename, move up/down, archive/unarchive, delete if never used.
+- **Add transaction**: Expense, Income and Transfer tabs; big amount box with
+  thousands separators; category chips; remembers the account you used last time;
+  warns (but allows) when an account would go below zero.
+- **History screen**: month by month, grouped by day, with income/expense totals.
+  Tap any transaction to edit or delete it.
+- **Home screen**: real net worth, cash & bank, savings, and this month's income and
+  expenses.
+- Activity log now records added/edited/deleted transactions and account changes.
+- `npm run check:ledger`: a health check that every transaction balances.
+- Demo seed now creates ~100 realistic fake transactions per demo user.
+- 17 new tests (39 total): every form balances, balances add up, edit/delete update
+  balances, bad amounts/dates rejected, wrong account types rejected, can't post to
+  or change another user's data, archived accounts blocked for new entries.
+
+### Changed
+- Each user now has a time zone setting (default Asia/Colombo) so "today" is right
+  even when the app is hosted elsewhere later.
+
 ## Phase 0: Setup (2026-10-06)
 
 ### Added

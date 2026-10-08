@@ -1,18 +1,28 @@
-import { PlusIcon } from "lucide-react";
-import { ComingSoon, PageHeader } from "@/components/coming-soon";
-import { requireUser } from "@/lib/auth/session";
+import { PageHeader } from "@/components/coming-soon";
+import { EntryForm } from "@/components/entry-form";
+import { Card, CardContent } from "@/components/ui/card";
+import { getLedger } from "@/lib/auth/session";
+import { todayIso } from "@/lib/format";
+import { getFormData } from "@/lib/ledger/form-data";
 
 export const metadata = { title: "Add transaction" };
 
-export default async function AddPage() {
-  await requireUser();
+const KINDS = { expense: "EXPENSE", income: "INCOME", transfer: "TRANSFER" } as const;
+
+export default async function AddPage({ searchParams }: PageProps<"/add">) {
+  const { user, db } = await getLedger();
+  const { type } = await searchParams;
+  const data = await getFormData(db);
+  const initialKind = KINDS[(typeof type === "string" ? type : "expense") as keyof typeof KINDS] ?? "EXPENSE";
+
   return (
-    <>
+    <div className="mx-auto max-w-xl">
       <PageHeader title="Add transaction" />
-      <ComingSoon icon={PlusIcon} phase="Phase 1">
-        Simple forms for income, expenses and transfers. You fill in the form, and the app records
-        both sides of the entry for you.
-      </ComingSoon>
-    </>
+      <Card>
+        <CardContent>
+          <EntryForm data={data} today={todayIso(user.timezone)} currency={user.currency} initialKind={initialKind} />
+        </CardContent>
+      </Card>
+    </div>
   );
 }

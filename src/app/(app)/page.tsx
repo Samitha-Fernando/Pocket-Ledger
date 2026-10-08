@@ -1,40 +1,71 @@
+import Link from "next/link";
 import { ChartLineIcon } from "lucide-react";
 import { ComingSoon, PageHeader } from "@/components/coming-soon";
-import { requireUser } from "@/lib/auth/session";
-import { formatDate, formatMoney } from "@/lib/format";
+import { getLedger } from "@/lib/auth/session";
+import { formatIsoDate, formatMonth, formatMoney, todayIso } from "@/lib/format";
+import { getAccountsWithBalances } from "@/lib/ledger/accounts";
+import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Home" };
 
-const TILES = [
-  { label: "Net worth", phase: "Phase 6" },
-  { label: "Cash & bank", phase: "Phase 1" },
-  { label: "Savings", phase: "Phase 1" },
-  { label: "Lent out", phase: "Phase 3" },
-  { label: "Fixed assets", phase: "Phase 2" },
-  { label: "Debts", phase: "Phase 4" },
-];
+function Tile({ label, value, note, href, muted }: { label: string; value: string; note?: string; href?: string; muted?: boolean }) {
+  const body = (
+    <>
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className={cn("mt-1 text-lg font-semibold tabular-nums", muted && "text-muted-foreground/60")}>{value}</p>
+      {note && <p className="mt-1 text-xs text-muted-foreground">{note}</p>}
+    </>
+  );
+  const className = "rounded-xl border bg-card p-4";
+  return href ? (
+    <Link href={href} className={cn(className, "transition-colors hover:bg-muted/60")}>
+      {body}
+    </Link>
+  ) : (
+    <div className={className}>{body}</div>
+  );
+}
 
 export default async function HomePage() {
-  const user = await requireUser();
-  const firstName = user.name.split(" ")[0];
+  const { user, db } = await getLedger();
+  const today = todayIso(user.timezone);
+  const month = today.slice(0, 7);
+  const [accounts, monthly] = await Promise.all([
+    getAccountsWithBalances(db),
+    getAccountsWithBalances(db, { from: `${month}-01`, to: `${month}-31` }),
+  ]);
+
+  const total = (filter: (a: (typeof accounts)[number]) => boolean, list = accounts) =>
+    list.filter(filter).reduce((s, a) => s + a.balance, BigInt(0));
+  const cashBank = total((a) => a.type === "ASSET" && a.subtype !== "SAVINGS");
+  const savings = total((a) => a.type === "ASSET" && a.subtype === "SAVINGS");
+  const netWorth = total((a) => a.type === "ASSET") - total((a) => a.type === "LIABILITY");
+  const income = total((a) => a.type === "INCOME", monthly);
+  const expenses = total((a) => a.type === "EXPENSE", monthly);
+  const money = (v: bigint) => formatMoney(v, user.currency);
 
   return (
     <>
-      <PageHeader title={`Hello, ${firstName}`} description={`Today is ${formatDate(new Date())}`} />
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-3">
-        {TILES.map((tile) => (
-          <div key={tile.label} className="rounded-xl border bg-card p-4">
-            <p className="text-sm text-muted-foreground">{tile.label}</p>
-            <p className="mt-1 text-lg font-semibold tabular-nums text-muted-foreground/60">
-              {formatMoney(0, user.currency)}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">{tile.phase}</p>
-          </div>
-        ))}
+      <PageHeader title={`Hello, ${user.name.split(" ")[0]}`} description={`Today is ${formatIsoDate(today)}`} />
+
+      <div className="mb-6 rounded-2xl bg-primary p-5 text-primary-foreground">
+        <p className="text-sm opacity-80">Net worth</p>
+        <p className="mt-1 text-3xl font-semibold tabular-nums">{money(netWorth)}</p>
+        <p className="mt-1 text-xs opacity-80">What you own minus what you owe</p>
       </div>
+
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <Tile label="Cash & bank" value={money(cashBank)} href="/accounts" />
+        <Tile label="Savings" value={money(savings)} href="/accounts" />
+        <Tile label={`Income · ${formatMonth(month).split(" ")[0]}`} value={money(income)} href="/history" />
+        <Tile label={`Expenses · ${formatMonth(month).split(" ")[0]}`} value={money(expenses)} href="/history" />
+        <Tile label="Lent out" value={money(BigInt(0))} note="Phase 3" muted />
+        <Tile label="Fixed assets" value={money(BigInt(0))} note="Phase 2" muted />
+        <Tile label="Debts" value={money(BigInt(0))} note="Phase 4" muted />
+      </div>
+
       <ComingSoon icon={ChartLineIcon} phase="Phase 6">
-        Your dashboard will show net worth over time, income vs expenses, savings rate, top spending
-        categories and what is due soon.
+        Net-worth trend, income vs expenses by month, savings rate, top spending categories and what is due soon.
       </ComingSoon>
     </>
   );

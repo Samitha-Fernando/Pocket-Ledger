@@ -11,6 +11,8 @@ let bob: string;
 let bobLogId: string;
 
 beforeAll(async () => {
+  await prisma.entry.deleteMany();
+  await prisma.account.deleteMany();
   await prisma.auditLog.deleteMany();
   await prisma.user.deleteMany();
   alice = (await prisma.user.create({ data: { name: "Alice", email: "alice@example.test", passwordHash: "x" } })).id;

@@ -31,14 +31,88 @@ model User {
   // Per-user settings
   autoLockMinutes Int    @default(10)
   currency        String @default("LKR")
+  timezone        String @default("Asia/Colombo")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   sessions       Session[]
-  invitesCreated Invite[]   @relation("InviteCreatedBy")
-  inviteUsed     Invite?    @relation("InviteUsedBy")
+  invitesCreated Invite[]    @relation("InviteCreatedBy")
+  inviteUsed     Invite?     @relation("InviteUsedBy")
   auditLogs      AuditLog[]
+  accounts       Account[]
+  entries        Entry[]
+  entryLines     EntryLine[]
+}
+
+// ---- Ledger (double-entry) ---------------------------------------------------
+
+enum AccountType {
+  ASSET // things you own: cash, bank, savings (later: assets, money lent)
+  LIABILITY // money you owe (Phase 4)
+  INCOME // income categories
+  EXPENSE // expense categories
+  EQUITY // opening balances
+}
+
+// An "account" is anything money can sit in or flow through, including
+// income and expense categories.
+model Account {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  type      AccountType
+  subtype   String? // ASSET: CASH | BANK | SAVINGS | OTHER
+  isSystem  Boolean     @default(false) // created and managed by the app (e.g. Opening Balances)
+  archived  Boolean     @default(false)
+  sortOrder Int         @default(0)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  lines EntryLine[]
+
+  @@index([userId, type])
+}
+
+enum EntryKind {
+  OPENING_BALANCE
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+// One transaction as the person sees it ("Paid Rs 5,000 for groceries").
+model Entry {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      EntryKind
+  date      String // calendar date "YYYY-MM-DD" (no time zone surprises)
+  details   String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  lines EntryLine[]
+
+  @@index([userId, date])
+}
+
+// The two (or more) sides of an Entry. Amounts are whole cents:
+// positive = money flowing INTO the account, negative = flowing OUT
+// (accountants call these debit and credit). Lines of an entry always sum to 0.
+model EntryLine {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entryId   String
+  entry     Entry   @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  amount    BigInt
+
+  @@index([entryId])
+  @@index([userId, accountId])
 }
 
 // One row per user per device ("remembered login"). The device can be

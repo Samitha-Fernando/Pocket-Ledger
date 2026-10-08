@@ -26,6 +26,14 @@ const ACTION_LABELS: Record<string, string> = {
   sign_out: "Signed out",
   invite_created: "Invite created",
   invite_revoked: "Invite revoked",
+  entry_created: "Transaction added",
+  entry_updated: "Transaction edited",
+  entry_deleted: "Transaction deleted",
+  ledger_account_created: "Account added",
+  ledger_account_renamed: "Account renamed",
+  ledger_account_archived: "Account archived",
+  ledger_account_unarchived: "Account unarchived",
+  ledger_account_deleted: "Account deleted",
 };
 
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {

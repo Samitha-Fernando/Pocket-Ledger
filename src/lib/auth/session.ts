@@ -3,6 +3,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db/client";
 import { scopedDb } from "@/lib/db/scoped";
+import { ensureDefaultAccounts } from "@/lib/ledger/accounts";
 import { newToken, sha256 } from "./crypto";
 import { IP_ATTEMPT_LIMIT, IP_WINDOW_MINUTES, SESSION_DAYS, isIdleExpired } from "./policy";
 
@@ -132,6 +133,13 @@ export async function getUserDb() {
   const user = await requireUser();
   return { user, db: scopedDb(prisma, user.id) };
 }
+
+/** Like getUserDb, and makes sure the default accounts exist (once per request). */
+export const getLedger = cache(async () => {
+  const { user, db } = await getUserDb();
+  await ensureDefaultAccounts(db);
+  return { user, db };
+});
 
 export async function lockCurrentSession() {
   const current = await getCurrentSession();

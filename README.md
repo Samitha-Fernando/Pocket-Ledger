@@ -8,7 +8,7 @@ Under the hood every transaction is **double-entry**: money always moves *from* 
 account *to* another, so balances always reconcile. You never have to think in
 debits and credits; you fill in a simple form and the app records both sides.
 
-> Status: **Phase 0 (setup)** is complete. See [CHANGELOG.md](CHANGELOG.md) and the
+> Status: **Phase 1 (accounts & core transactions)** is complete. See [CHANGELOG.md](CHANGELOG.md) and the
 > full plan in [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md).
 
 ---
@@ -52,8 +52,26 @@ Demo logins (all fake):
 | `npm run lint` | Checks code style |
 | `npm run build` | Makes a production build (the way it would run on a server) |
 | `npm run db:studio` | Opens a viewer for the database |
+| `npm run check:ledger` | Health check: confirms every transaction balances and lists balances (`npm run check:ledger -- demo` for the demo database) |
+| `npm run db:migrate` | After pulling new code: updates your database to the latest design |
 
 ---
+
+## How the money works
+
+- **Accounts** are anything money sits in or flows through: *your money* (cash,
+  bank, savings), *income categories* and *expense categories*. You start with a
+  ready-made list and can add, rename, reorder and archive. Used accounts can't be
+  deleted (so history stays complete); unused ones can.
+- **Every transaction has two sides that add up to zero.** A Rs 5,000 grocery
+  expense paid in cash is stored as *Cash in hand −5,000* and *Groceries +5,000*.
+  The app refuses to save anything that doesn't balance.
+- **Balances are never typed in.** They are always the sum of the transactions.
+  A starting balance is recorded as a transaction from the behind-the-scenes
+  *Opening Balances* account.
+- **Transfers aren't expenses.** Moving money to savings changes where it is,
+  not how much you have, so your net worth stays the same.
+- Amounts are stored as whole cents, so there are no rounding errors.
 
 ## How sign-in and privacy work
 

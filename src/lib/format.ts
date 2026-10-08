@@ -53,3 +53,46 @@ export function parseDate(input: string): Date | null {
   const date = new Date(y, m - 1, d);
   return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d ? date : null;
 }
+
+// ---- Calendar dates stored as "YYYY-MM-DD" strings ---------------------------
+
+export function isIsoDate(value: string) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!m) return false;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const date = new Date(Date.UTC(y, mo - 1, d));
+  return date.getUTCFullYear() === y && date.getUTCMonth() === mo - 1 && date.getUTCDate() === d;
+}
+
+/** "2026-10-06" → "06/10/2026" */
+export function formatIsoDate(iso: string) {
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+/** Today's date as "YYYY-MM-DD" in the given time zone (default Sri Lanka). */
+export function todayIso(timeZone = "Asia/Colombo", now = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+}
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+/** "2026-10" → "October 2026" */
+export function formatMonth(month: string) {
+  const [y, m] = month.split("-");
+  return `${MONTHS[Number(m) - 1]} ${y}`;
+}
+
+/** Adds n months to "YYYY-MM". */
+export function shiftMonth(month: string, n: number) {
+  const [y, m] = month.split("-").map(Number);
+  const total = y * 12 + (m - 1) + n;
+  return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, "0")}`;
+}
+
+/** Cents → plain editable text, e.g. 125050 → "1250.50" (for form fields). */
+export function centsToInput(cents: number) {
+  const abs = Math.abs(cents);
+  const text = `${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, "0")}`;
+  return cents < 0 ? `-${text}` : text;
+}

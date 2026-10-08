@@ -4,13 +4,32 @@
     {
       "name": "demo",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev:demo"],
+      "runtimeArgs": [
+        "run",
+        "dev:demo"
+      ],
       "port": 3000
+    },
+    {
+      "name": "demo-prod-3100",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "cross-env",
+        "DATABASE_URL=file:./data/demo.db",
+        "next",
+        "start",
+        "-p",
+        "3100"
+      ],
+      "port": 3100
     },
     {
       "name": "dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 3000
     }
   ]
