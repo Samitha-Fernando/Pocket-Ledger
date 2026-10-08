@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
-import { ArrowDownUpIcon, TriangleAlertIcon } from "lucide-react";
+import { ArrowDownUpIcon, PackageIcon, TriangleAlertIcon } from "lucide-react";
+import { AssetFields } from "@/components/asset-fields";
+import { Switch } from "@/components/ui/switch";
 import { FormMessage, SubmitButton } from "@/components/form-bits";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -96,16 +98,22 @@ export function EntryForm({
   currency,
   entry,
   initialKind = "EXPENSE",
+  assetOnly = false,
 }: {
   data: LedgerFormData;
   today: string;
   currency: string;
   entry?: EntryView;
   initialKind?: Kind;
+  /** The "Buy asset" page: always records an asset. */
+  assetOnly?: boolean;
 }) {
   const [state, action] = useActionState(saveEntryAction, undefined);
   const editing = Boolean(entry);
-  const [kind, setKind] = useState<Kind>(entry?.kind ?? initialKind);
+  const [kind, setKind] = useState<Kind>((entry?.kind as Kind | undefined) ?? (assetOnly ? "EXPENSE" : initialKind));
+  // null = decide automatically from the amount (new purchases only).
+  const [recordAsAsset, setRecordAsAsset] = useState<boolean | null>(assetOnly ? true : editing ? false : null);
+  const [linkedAssetId, setLinkedAssetId] = useState(entry?.kind === "EXPENSE" ? entry.assetId ?? "" : "");
 
   const [amount, setAmount] = useState(entry ? centsToInput(entry.amount) : "");
   const [date, setDate] = useState(entry?.date ?? today);
@@ -137,6 +145,11 @@ export function EntryForm({
 
   // Warn (don't block) when an account would go below zero.
   const cents = parseMoneyToCents(amount) ?? 0;
+
+  // Asset vs expense is your choice; big purchases default to "asset".
+  const overThreshold = cents >= data.assetThreshold;
+  const isAsset = kind === "EXPENSE" && (recordAsAsset ?? overThreshold);
+  const submitKind = isAsset ? "ASSET_PURCHASE" : kind;
   const payingId = kind === "EXPENSE" ? payFrom : kind === "TRANSFER" ? fromId : "";
   const paying = data.assets.find((a) => a.id === payingId);
   const alreadyCounted = entry && (entry.accountId === payingId || entry.fromId === payingId) ? entry.amount : 0;
@@ -146,9 +159,11 @@ export function EntryForm({
   return (
     <form action={action} className="grid gap-5">
       {entry && <input type="hidden" name="entryId" value={entry.id} />}
-      <input type="hidden" name="kind" value={kind} />
+      {/* Editing an expense with the switch on converts it into an asset. */}
+      {entry && isAsset && <input type="hidden" name="fromEntryId" value={entry.id} />}
+      <input type="hidden" name="kind" value={submitKind} />
 
-      {kind !== "OPENING_BALANCE" && (
+      {kind !== "OPENING_BALANCE" && !assetOnly && (
         <div role="tablist" aria-label="Transaction type" className="grid grid-cols-3 gap-1 rounded-xl bg-muted p-1">
           {TABS.map((t) => (
             <button
@@ -202,10 +217,47 @@ export function EntryForm({
         )}
       </div>
 
+      {kind === "EXPENSE" && !assetOnly && (
+        <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2">
+          <PackageIcon className="size-5 text-muted-foreground" />
+          <span className="flex-1">
+            <span className="block text-sm font-medium">Record as asset?</span>
+            <span className="block text-xs text-muted-foreground">
+              {isAsset
+                ? overThreshold && recordAsAsset === null
+                  ? `Switched on because it's ${formatMoney(data.assetThreshold, currency)} or more. You can switch it off.`
+                  : "It keeps its value and loses a little each month (depreciation)."
+                : "For things that last, like a bike, phone or laptop."}
+            </span>
+          </span>
+          <Switch checked={isAsset} onCheckedChange={(on: boolean) => setRecordAsAsset(on)} aria-label="Record as asset" />
+        </label>
+      )}
+
+      {kind === "EXPENSE" && isAsset && (
+        <AssetFields currency={currency} defaults={{ name: entry?.details ?? undefined }} />
+      )}
+
       {kind === "EXPENSE" && (
         <>
-          <CategoryPicker options={data.expenseCategories} value={expenseCat} onChange={setExpenseCat} />
+          {!isAsset && <CategoryPicker options={data.expenseCategories} value={expenseCat} onChange={setExpenseCat} />}
           <AccountSelect label="Paid from" name="accountId" options={data.assets} value={payFrom} onChange={setPayFrom} currency={currency} />
+          {!isAsset && data.fixedAssets.length > 0 && (
+            <div className="grid gap-1.5">
+              <Label htmlFor="linkedAssetId">For an asset? (optional)</Label>
+              <select id="linkedAssetId" name="linkedAssetId" value={linkedAssetId} onChange={(e) => setLinkedAssetId(e.target.value)} className={selectClass}>
+                <option value="">Not linked</option>
+                {data.fixedAssets
+                  .filter((a) => a.active || a.id === linkedAssetId)
+                  .map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+              </select>
+              <p className="text-xs text-muted-foreground">Link repairs and servicing to see the true cost of owning it.</p>
+            </div>
+          )}
         </>
       )}
       {kind === "INCOME" && (
@@ -265,7 +317,7 @@ export function EntryForm({
           View history
         </Link>
       )}
-      <SubmitButton>{editing ? "Save changes" : SAVE_LABELS[kind]}</SubmitButton>
+      <SubmitButton>{isAsset ? (editing ? "Convert to asset" : "Save asset") : editing ? "Save changes" : SAVE_LABELS[kind]}</SubmitButton>
     </form>
   );
 }

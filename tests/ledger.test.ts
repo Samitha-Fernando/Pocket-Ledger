@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db/client";
 import { scopedDb, type UserDb } from "@/lib/db/scoped";
 import { ensureDefaultAccounts, getAccountsWithBalances } from "@/lib/ledger/accounts";
+import { resetDb } from "./helpers";
 import { type EntryInput, assertBalanced, buildLines, deleteEntry, saveEntry, sumLines } from "@/lib/ledger/engine";
 
 const ZERO = BigInt(0);
@@ -22,11 +23,7 @@ async function expectAllEntriesBalanced() {
 }
 
 beforeAll(async () => {
-  await prisma.entryLine.deleteMany();
-  await prisma.entry.deleteMany();
-  await prisma.account.deleteMany();
-  await prisma.auditLog.deleteMany();
-  await prisma.user.deleteMany();
+  await resetDb();
   const me = await prisma.user.create({ data: { name: "Me", email: "me@ledger.test", passwordHash: "x" } });
   const other = await prisma.user.create({ data: { name: "Other", email: "other@ledger.test", passwordHash: "x" } });
   db = scopedDb(prisma, me.id);

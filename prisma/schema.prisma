@@ -32,6 +32,8 @@ model User {
   autoLockMinutes Int    @default(10)
   currency        String @default("LKR")
   timezone        String @default("Asia/Colombo")
+  // Purchases at or above this (in cents) default to "record as asset". Rs 50,000.
+  assetThresholdCents Int @default(5000000)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -43,6 +45,7 @@ model User {
   accounts       Account[]
   entries        Entry[]
   entryLines     EntryLine[]
+  fixedAssets    FixedAsset[]
 }
 
 // ---- Ledger (double-entry) ---------------------------------------------------
@@ -63,14 +66,16 @@ model Account {
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
   type      AccountType
-  subtype   String? // ASSET: CASH | BANK | SAVINGS | OTHER
+  subtype   String? // ASSET: CASH | BANK | SAVINGS | OTHER | FIXED (a fixed asset)
   isSystem  Boolean     @default(false) // created and managed by the app (e.g. Opening Balances)
+  systemKey String? // which app-managed account: OPENING | DEPRECIATION | ASSET_GAIN | ASSET_LOSS
   archived  Boolean     @default(false)
   sortOrder Int         @default(0)
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
-  lines EntryLine[]
+  lines      EntryLine[]
+  fixedAsset FixedAsset?
 
   @@index([userId, type])
 }
@@ -80,6 +85,37 @@ enum EntryKind {
   INCOME
   EXPENSE
   TRANSFER
+  ASSET_PURCHASE
+  DEPRECIATION
+  ASSET_REVALUATION
+  ASSET_SALE
+}
+
+// Asset register: one row per thing you own (bike, phone, laptop…).
+// Its current value is the balance of its own ledger account.
+model FixedAsset {
+  id               String  @id @default(cuid())
+  userId           String
+  user             User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId        String  @unique
+  account          Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  name             String
+  assetClass       String // VEHICLES | ELECTRONICS | COMPUTERS | FURNITURE | OTHER
+  purchaseDate     String // "YYYY-MM-DD"
+  cost             BigInt // cents
+  residualValue    BigInt  @default(0) // value left at the end of its life (cents)
+  usefulLifeMonths Int // 0 = doesn't lose value
+  method           String  @default("STRAIGHT_LINE")
+  status           String  @default("ACTIVE") // ACTIVE | SOLD | DISPOSED
+  disposedDate     String?
+  notes            String?
+  photoPath        String? // file name inside the uploads folder
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  entries Entry[]
+
+  @@index([userId, status])
 }
 
 // One transaction as the person sees it ("Paid Rs 5,000 for groceries").
@@ -90,11 +126,16 @@ model Entry {
   kind      EntryKind
   date      String // calendar date "YYYY-MM-DD" (no time zone surprises)
   details   String?
+  // Link to an asset: its purchase, depreciation, value change, sale, or a repair.
+  assetId   String?
+  asset     FixedAsset? @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  depMonth  String? // "YYYY-MM" for depreciation entries (stops double-posting)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
   lines EntryLine[]
 
+  @@unique([assetId, depMonth])
   @@index([userId, date])
 }
 

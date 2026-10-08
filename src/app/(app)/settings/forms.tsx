@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { CheckIcon, CopyIcon } from "lucide-react";
 import { Field, FormMessage, SubmitButton } from "@/components/form-bits";
 import { Button } from "@/components/ui/button";
-import { changePassword, createInvite, setAutoLock, setPin } from "./actions";
+import { changePassword, createInvite, setAssetThreshold, setAutoLock, setPin } from "./actions";
 
 export function PinForm({ hasPin }: { hasPin: boolean }) {
   const [state, action] = useActionState(setPin, undefined);
@@ -27,6 +27,19 @@ export function AutoLockForm({ minutes }: { minutes: number }) {
     <form action={action} className="grid gap-4">
       <div className="flex items-end gap-3">
         <Field label="Lock after (minutes of inactivity)" name="minutes" type="number" min={1} max={120} defaultValue={minutes} className="flex-1" required />
+        <SubmitButton className="w-auto">Save</SubmitButton>
+      </div>
+      <FormMessage state={state} />
+    </form>
+  );
+}
+
+export function AssetThresholdForm({ value }: { value: string }) {
+  const [state, action] = useActionState(setAssetThreshold, undefined);
+  return (
+    <form action={action} className="grid gap-4">
+      <div className="flex items-end gap-3">
+        <Field label="Suggest &ldquo;record as asset&rdquo; from (Rs)" name="threshold" inputMode="decimal" defaultValue={value} className="flex-1" required />
         <SubmitButton className="w-auto">Save</SubmitButton>
       </div>
       <FormMessage state={state} />

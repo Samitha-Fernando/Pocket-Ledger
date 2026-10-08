@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LockIcon, LogOutIcon, SettingsIcon, UsersIcon } from "lucide-react";
 import { Brand } from "@/components/brand";
+import { DemoBanner } from "@/components/demo-banner";
 import { BottomNav, SidebarNav } from "@/components/app-shell/nav";
 import { IdleLock } from "@/components/app-shell/idle-lock";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -40,6 +41,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
+        <DemoBanner />
         {/* Top bar */}
         <header className="sticky top-0 z-30 flex h-14 items-center gap-1 border-b bg-background/95 px-4 pt-[env(safe-area-inset-top)] backdrop-blur md:px-6">
           <Link href="/" className="md:hidden">

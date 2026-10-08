@@ -12,7 +12,7 @@ const KINDS = { expense: "EXPENSE", income: "INCOME", transfer: "TRANSFER" } as 
 export default async function AddPage({ searchParams }: PageProps<"/add">) {
   const { user, db } = await getLedger();
   const { type } = await searchParams;
-  const data = await getFormData(db);
+  const data = await getFormData(db, user.assetThresholdCents);
   const initialKind = KINDS[(typeof type === "string" ? type : "expense") as keyof typeof KINDS] ?? "EXPENSE";
 
   return (

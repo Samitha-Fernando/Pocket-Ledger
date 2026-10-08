@@ -32,6 +32,7 @@ async function main() {
   const { scopedDb } = await import("../src/lib/db/scoped");
   const { ensureDefaultAccounts } = await import("../src/lib/ledger/accounts");
   const { saveEntry } = await import("../src/lib/ledger/engine");
+  const { createAsset } = await import("../src/lib/ledger/assets");
   const { shiftMonth, todayIso } = await import("../src/lib/format");
 
   for (const [index, u] of DEMO_USERS.entries()) {
@@ -96,7 +97,48 @@ async function main() {
       if (m === 2) await expense(22, "Gift", vary(5_000), "Birthday gift");
       await expense(14, "Body Care", vary(1_500), "Salon");
     }
-    console.log(`  ${u.name}: ${count} demo transactions`);
+    // ---- Fake assets, with repairs linked to them ----
+    const day = (m: number, d: number) => `${shiftMonth(start, m)}-${String(d).padStart(2, "0")}`;
+    const assets =
+      index === 0
+        ? [
+            { name: "Honda Dio scooter", assetClass: "VEHICLES", date: day(0, 12), cost: 485_000, from: "Savings account", life: 96, residual: 120_000 },
+            { name: "Samsung Galaxy phone", assetClass: "ELECTRONICS", date: day(1, 6), cost: 145_000, from: "Bank account", life: 36, residual: 0 },
+          ]
+        : [{ name: "Lenovo laptop", assetClass: "COMPUTERS", date: day(0, 20), cost: 235_000, from: "Savings account", life: 48, residual: 20_000 }];
+    for (const a of assets) {
+      const assetId = await createAsset(
+        db,
+        {
+          name: a.name,
+          assetClass: a.assetClass,
+          purchaseDate: a.date,
+          cost: rs(a.cost),
+          fundingAccountId: acc[a.from],
+          usefulLifeMonths: a.life,
+          residualValue: rs(a.residual),
+          notes: "Demo asset",
+        },
+        today,
+      );
+      if (a.assetClass === "VEHICLES") {
+        for (const [m, d, amount, details] of [[1, 9, 6_500, "Full service"], [2, 21, 3_200, "New rear tyre"]] as const) {
+          const date = day(m, d);
+          if (date > today) continue;
+          await saveEntry(db, {
+            kind: "EXPENSE",
+            date,
+            amount: rs(amount),
+            categoryId: acc["Assets Repairs & Maintenance"],
+            accountId: acc["Cash in hand"],
+            details,
+            assetId,
+          });
+          count++;
+        }
+      }
+    }
+    console.log(`  ${u.name}: ${count} demo transactions, ${assets.length} asset(s)`);
   }
 
   await prisma.$disconnect();

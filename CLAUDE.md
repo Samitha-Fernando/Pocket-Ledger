@@ -13,7 +13,14 @@ Full product brief: `docs/PROJECT_BRIEF.md`. The owner is not a developer.
 - Feature code gets data via `getUserDb()` (`src/lib/auth/session.ts`), never the raw
   `prisma` client. New tables with `userId` must be added to `USER_OWNED_MODELS` in
   `src/lib/db/scoped.ts` (a test enforces this).
-- Every protected page/action starts with `requireUser()` / `getUserDb()`.
+- Every protected page/action starts with `requireUser()` / `getUserDb()`; ledger pages use
+  `getLedger()` (also ensures system accounts + posts due depreciation).
+- Form entries go through `saveEntry` (`src/lib/ledger/engine.ts`); asset entries
+  (purchase, depreciation, revaluation, sale) only through `src/lib/ledger/assets.ts`.
+  System accounts are found by `systemKey`, never by name.
+- Tests share `tests/helpers.ts#resetDb` — add new tables there (children first).
+- Asset photos: `src/lib/uploads.ts` (./uploads, git-ignored), served only via
+  `/api/assets/[id]/photo` after an ownership check.
 - Next.js 16: middleware is `src/proxy.ts`. Bundled docs: `node_modules/next/dist/docs`.
 - Prisma 7: config in `prisma.config.ts`, client generated to `src/generated/prisma`,
   libSQL driver adapter. Run `npx prisma generate` after schema changes.

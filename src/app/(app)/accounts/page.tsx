@@ -4,7 +4,13 @@ import { PageHeader } from "@/components/coming-soon";
 import { Button } from "@/components/ui/button";
 import { getLedger } from "@/lib/auth/session";
 import { formatMonth, formatMoney, todayIso } from "@/lib/format";
-import { ASSET_SUBTYPES, type AccountWithBalance, getAccountsWithBalances } from "@/lib/ledger/accounts";
+import {
+  ASSET_SUBTYPES,
+  type AccountWithBalance,
+  FIXED_SUBTYPE,
+  getAccountsWithBalances,
+  isMoneyAccount,
+} from "@/lib/ledger/accounts";
 
 export const metadata = { title: "Accounts" };
 
@@ -54,10 +60,12 @@ export default async function AccountsPage() {
   ]);
 
   const active = allTime.filter((a) => !a.archived && !a.isSystem);
-  const assets = active.filter((a) => a.type === "ASSET");
+  const assets = active.filter((a) => isMoneyAccount(a));
+  // Fixed assets still owned (sold ones are worth 0 and live on the Assets page).
+  const fixed = active.filter((a) => a.subtype === FIXED_SUBTYPE && a.balance !== BigInt(0));
   const income = thisMonth.filter((a) => a.type === "INCOME" && !a.archived);
   const expenses = thisMonth.filter((a) => a.type === "EXPENSE" && !a.archived);
-  const archived = allTime.filter((a) => a.archived);
+  const archived = allTime.filter((a) => a.archived && a.subtype !== FIXED_SUBTYPE);
 
   return (
     <>
@@ -76,6 +84,7 @@ export default async function AccountsPage() {
           currency={user.currency}
           subtitle={(a) => ASSET_SUBTYPES[a.subtype as keyof typeof ASSET_SUBTYPES]}
         />
+        {fixed.length > 0 && <Group title="Fixed assets (worth now)" total={sum(fixed)} accounts={fixed} currency={user.currency} />}
         <Group title={`Income · ${formatMonth(month)}`} total={sum(income)} accounts={income} currency={user.currency} />
         <Group title={`Expenses · ${formatMonth(month)}`} total={sum(expenses)} accounts={expenses} currency={user.currency} />
 

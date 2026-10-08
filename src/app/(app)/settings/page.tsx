@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { prisma } from "@/lib/db/client";
 import { getUserDb } from "@/lib/auth/session";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { centsToInput, formatDate, formatDateTime } from "@/lib/format";
 import { signOutAction, switchUserAction } from "../../(auth)/actions";
 import { removePin, revokeInvite } from "./actions";
-import { AutoLockForm, InviteForm, PasswordForm, PinForm } from "./forms";
+import { AssetThresholdForm, AutoLockForm, InviteForm, PasswordForm, PinForm } from "./forms";
 
 export const metadata = { title: "Settings" };
 
@@ -34,6 +34,15 @@ const ACTION_LABELS: Record<string, string> = {
   ledger_account_archived: "Account archived",
   ledger_account_unarchived: "Account unarchived",
   ledger_account_deleted: "Account deleted",
+  asset_bought: "Asset bought",
+  asset_converted_from_expense: "Expense converted to asset",
+  asset_converted_to_expense: "Asset converted to expense",
+  asset_updated: "Asset edited",
+  asset_revalued: "Asset value changed",
+  asset_revaluation_removed: "Asset value change removed",
+  asset_sold: "Asset sold",
+  asset_disposed: "Asset scrapped / given away",
+  asset_sale_undone: "Asset sale undone",
 };
 
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
@@ -122,6 +131,13 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
 
         <Section title="Auto-lock" description="Locks the app when you haven't used it for a while.">
           <AutoLockForm minutes={user.autoLockMinutes} />
+        </Section>
+
+        <Section
+          title="Assets"
+          description="When you add an expense this big or bigger, the app switches on &ldquo;Record as asset?&rdquo; for you. You can always change it per purchase."
+        >
+          <AssetThresholdForm value={centsToInput(user.assetThresholdCents)} />
         </Section>
 
         <Section title="Appearance">

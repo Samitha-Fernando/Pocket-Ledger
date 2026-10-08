@@ -20,7 +20,10 @@ const NAV = [
 ];
 
 function isActive(pathname: string, href: string) {
-  return href === "/" ? pathname === "/" : pathname.startsWith(href);
+  if (href === "/") return pathname === "/";
+  // Asset pages live under the Registers tab.
+  if (href === "/registers" && pathname.startsWith("/assets")) return true;
+  return pathname.startsWith(href);
 }
 
 /** Desktop / tablet: left sidebar. */

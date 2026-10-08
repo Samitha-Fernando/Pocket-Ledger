@@ -3,7 +3,7 @@ import { ChartLineIcon } from "lucide-react";
 import { ComingSoon, PageHeader } from "@/components/coming-soon";
 import { getLedger } from "@/lib/auth/session";
 import { formatIsoDate, formatMonth, formatMoney, todayIso } from "@/lib/format";
-import { getAccountsWithBalances } from "@/lib/ledger/accounts";
+import { FIXED_SUBTYPE, getAccountsWithBalances, isMoneyAccount } from "@/lib/ledger/accounts";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Home" };
@@ -37,10 +37,12 @@ export default async function HomePage() {
 
   const total = (filter: (a: (typeof accounts)[number]) => boolean, list = accounts) =>
     list.filter(filter).reduce((s, a) => s + a.balance, BigInt(0));
-  const cashBank = total((a) => a.type === "ASSET" && a.subtype !== "SAVINGS");
+  const cashBank = total((a) => isMoneyAccount(a) && a.subtype !== "SAVINGS");
   const savings = total((a) => a.type === "ASSET" && a.subtype === "SAVINGS");
+  const fixedAssets = total((a) => a.subtype === FIXED_SUBTYPE);
   const netWorth = total((a) => a.type === "ASSET") - total((a) => a.type === "LIABILITY");
   const income = total((a) => a.type === "INCOME", monthly);
+  // Includes depreciation: a real (non-cash) expense.
   const expenses = total((a) => a.type === "EXPENSE", monthly);
   const money = (v: bigint) => formatMoney(v, user.currency);
 
@@ -60,7 +62,7 @@ export default async function HomePage() {
         <Tile label={`Income · ${formatMonth(month).split(" ")[0]}`} value={money(income)} href="/history" />
         <Tile label={`Expenses · ${formatMonth(month).split(" ")[0]}`} value={money(expenses)} href="/history" />
         <Tile label="Lent out" value={money(BigInt(0))} note="Phase 3" muted />
-        <Tile label="Fixed assets" value={money(BigInt(0))} note="Phase 2" muted />
+        <Tile label="Fixed assets" value={money(fixedAssets)} note="worth today" href="/assets" />
         <Tile label="Debts" value={money(BigInt(0))} note="Phase 4" muted />
       </div>
 

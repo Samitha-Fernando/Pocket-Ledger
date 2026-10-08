@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArchiveIcon, ArrowDownIcon, ArrowUpIcon, ChevronLeftIcon, Trash2Icon, UndoIcon } from "lucide-react";
 import { EntryRow } from "@/components/entry-row";
 import { Button } from "@/components/ui/button";
@@ -28,12 +28,14 @@ function withRunningBalance<L extends { amount: bigint; entry: EntryWithLines }>
 export default async function AccountPage({ params }: PageProps<"/accounts/[id]">) {
   const { user, db } = await getLedger();
   const { id } = await params;
-  const account = await db.account.findUnique({ where: { id } });
+  const account = await db.account.findUnique({ where: { id }, include: { fixedAsset: { select: { id: true } } } });
   if (!account) notFound();
+  // A fixed asset's account is shown on its asset page.
+  if (account.fixedAsset) redirect(`/assets/${account.fixedAsset.id}`);
 
   const lines = await db.entryLine.findMany({
     where: { accountId: id },
-    include: { entry: { include: { lines: { include: { account: true } } } } },
+    include: { entry: { include: { lines: { include: { account: true } }, asset: { select: { name: true } } } } },
     orderBy: [{ entry: { date: "asc" } }, { entry: { createdAt: "asc" } }],
   });
 

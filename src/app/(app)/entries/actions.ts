@@ -6,6 +6,7 @@ import { audit, getLedger } from "@/lib/auth/session";
 import { field } from "@/lib/auth/validate";
 import { type EntryInput, LedgerError, deleteEntry, saveEntry } from "@/lib/ledger/engine";
 import { formatMoney, parseMoneyToCents } from "@/lib/format";
+import { createAssetAction } from "../assets/actions";
 
 export type EntryFormState = { error?: string; success?: string; savedAt?: number } | undefined;
 
@@ -18,8 +19,17 @@ function readEntry(fd: FormData): EntryInput | string {
 
   switch (kind) {
     case "INCOME":
-    case "EXPENSE":
       return { kind, date, amount, details, categoryId: field(fd, "categoryId"), accountId: field(fd, "accountId") };
+    case "EXPENSE":
+      return {
+        kind,
+        date,
+        amount,
+        details,
+        categoryId: field(fd, "categoryId"),
+        accountId: field(fd, "accountId"),
+        assetId: field(fd, "linkedAssetId") || null,
+      };
     case "TRANSFER":
       return { kind, date, amount, details, fromId: field(fd, "fromId"), toId: field(fd, "toId") };
     case "OPENING_BALANCE":
@@ -30,7 +40,10 @@ function readEntry(fd: FormData): EntryInput | string {
 }
 
 /** Saves a new transaction, or updates one when the form has an `entryId`. */
-export async function saveEntryAction(_prev: EntryFormState, fd: FormData): Promise<EntryFormState> {
+export async function saveEntryAction(prev: EntryFormState, fd: FormData): Promise<EntryFormState> {
+  // "Record as asset" switched on: this purchase goes to the asset register instead.
+  if (field(fd, "kind") === "ASSET_PURCHASE") return createAssetAction(prev, fd);
+
   const { user, db } = await getLedger();
   const input = readEntry(fd);
   if (typeof input === "string") return { error: input };

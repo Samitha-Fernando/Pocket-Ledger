@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db/client";
 import { USER_OWNED_MODELS, scopedDb } from "@/lib/db/scoped";
+import { resetDb } from "./helpers";
 
 // Proves that one user can never read or change another user's data
 // through the scoped database client that all feature code uses.
@@ -11,10 +12,7 @@ let bob: string;
 let bobLogId: string;
 
 beforeAll(async () => {
-  await prisma.entry.deleteMany();
-  await prisma.account.deleteMany();
-  await prisma.auditLog.deleteMany();
-  await prisma.user.deleteMany();
+  await resetDb();
   alice = (await prisma.user.create({ data: { name: "Alice", email: "alice@example.test", passwordHash: "x" } })).id;
   bob = (await prisma.user.create({ data: { name: "Bob", email: "bob@example.test", passwordHash: "x" } })).id;
   await prisma.auditLog.createMany({

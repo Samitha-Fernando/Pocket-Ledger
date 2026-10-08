@@ -1,13 +1,17 @@
 import { Brand } from "@/components/brand";
+import { DemoBanner } from "@/components/demo-banner";
 
 // These screens check the database and cookies on every visit.
 export const dynamic = "force-dynamic";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 px-4 py-10">
-      <Brand className="text-lg" />
-      <div className="w-full max-w-sm">{children}</div>
-    </main>
+    <>
+      <DemoBanner />
+      <main className="flex min-h-dvh flex-col items-center justify-center gap-6 px-4 py-10">
+        <Brand className="text-lg" />
+        <div className="w-full max-w-sm">{children}</div>
+      </main>
+    </>
   );
 }

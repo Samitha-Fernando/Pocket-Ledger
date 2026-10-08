@@ -8,7 +8,7 @@ Under the hood every transaction is **double-entry**: money always moves *from* 
 account *to* another, so balances always reconcile. You never have to think in
 debits and credits; you fill in a simple form and the app records both sides.
 
-> Status: **Phase 1 (accounts & core transactions)** is complete. See [CHANGELOG.md](CHANGELOG.md) and the
+> Status: **Phase 2 (assets)** is complete. See [CHANGELOG.md](CHANGELOG.md) and the
 > full plan in [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md).
 
 ---
@@ -27,6 +27,9 @@ Then open **http://localhost:3000**. The very first time, it asks you to create 
 **admin** account (that's you).
 
 ### Recording videos with fake data
+
+When the app runs on the demo database, a yellow **DEMO DATA** strip shows at the
+top of every screen, so you always know which one you're in.
 
 Your real database is `data/pocket-ledger.db`. For videos, use a separate demo
 database full of made-up people:
@@ -72,6 +75,27 @@ Demo logins (all fake):
 - **Transfers aren't expenses.** Moving money to savings changes where it is,
   not how much you have, so your net worth stays the same.
 - Amounts are stored as whole cents, so there are no rounding errors.
+
+## Assets (things you own that keep their value)
+
+- **Asset or expense is your choice per purchase.** On the Expense form, switch on
+  **"Record as asset?"**. It switches on by itself for Rs 50,000 or more (change
+  the amount in Settings), and you can always switch it off.
+- Buying an asset moves money from your account into the asset, so your **net
+  worth doesn't drop** on the day you buy it.
+- **Depreciation**: each month the asset loses an equal share of (price − leftover
+  value) over its useful life, starting the month you buy it. It's posted on the
+  last day of each month as a "Depreciation" expense, automatically, whenever you
+  open the app. Default lives: Vehicles 8 yrs, Electronics & phones 3, Computers 4,
+  Furniture 7, Other 5 (change per asset; 0 = doesn't lose value).
+- **Change value** (e.g. after damage), **sell** or **scrap** from the asset's page.
+  Differences are recorded as "Gain on assets" / "Loss on assets".
+- **Link repairs** to an asset to see the **true cost of owning it**: price +
+  repairs − what it's worth now.
+- Changed your mind? Convert an expense to an asset (edit it in History and switch
+  on "Record as asset?") or an asset back to an expense (on its page).
+- Photos are stored in the `uploads/` folder (never committed) and only the owner
+  can see them.
 
 ## How sign-in and privacy work
 

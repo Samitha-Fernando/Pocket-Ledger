@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db/client";
 import { scopedDb } from "@/lib/db/scoped";
 import { ensureDefaultAccounts } from "@/lib/ledger/accounts";
+import { catchUpAllAssets } from "@/lib/ledger/assets";
+import { todayIso } from "@/lib/format";
 import { newToken, sha256 } from "./crypto";
 import { IP_ATTEMPT_LIMIT, IP_WINDOW_MINUTES, SESSION_DAYS, isIdleExpired } from "./policy";
 
@@ -134,10 +136,14 @@ export async function getUserDb() {
   return { user, db: scopedDb(prisma, user.id) };
 }
 
-/** Like getUserDb, and makes sure the default accounts exist (once per request). */
+/**
+ * Like getUserDb, and (once per request) makes sure the default accounts exist
+ * and every asset's monthly depreciation is posted up to today.
+ */
 export const getLedger = cache(async () => {
   const { user, db } = await getUserDb();
   await ensureDefaultAccounts(db);
+  await catchUpAllAssets(db, todayIso(user.timezone));
   return { user, db };
 });
 

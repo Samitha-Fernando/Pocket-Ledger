@@ -11,7 +11,20 @@ export type AssetSubtype = keyof typeof ASSET_SUBTYPES;
 
 export const OPENING_BALANCES_NAME = "Opening Balances";
 
-type Seed = { name: string; type: AccountType; subtype?: AssetSubtype; isSystem?: boolean };
+/** Accounts the app manages itself (people can't post to them by hand). */
+export type SystemKey = "OPENING" | "DEPRECIATION" | "ASSET_GAIN" | "ASSET_LOSS";
+
+/** Subtype of the ledger account behind each fixed asset. */
+export const FIXED_SUBTYPE = "FIXED";
+
+type Seed = { name: string; type: AccountType; subtype?: AssetSubtype; systemKey?: SystemKey };
+
+const SYSTEM_ACCOUNTS: Seed[] = [
+  { name: "Depreciation", type: "EXPENSE", systemKey: "DEPRECIATION" },
+  { name: "Gain on assets", type: "INCOME", systemKey: "ASSET_GAIN" },
+  { name: "Loss on assets", type: "EXPENSE", systemKey: "ASSET_LOSS" },
+  { name: OPENING_BALANCES_NAME, type: "EQUITY", systemKey: "OPENING" },
+];
 
 /** The starting chart of accounts every new user gets. */
 export const DEFAULT_ACCOUNTS: Seed[] = [
@@ -41,21 +54,43 @@ export const DEFAULT_ACCOUNTS: Seed[] = [
   { name: "Interest Paid", type: "EXPENSE" },
   { name: "Other", type: "EXPENSE" },
 
-  { name: OPENING_BALANCES_NAME, type: "EQUITY", isSystem: true },
+  ...SYSTEM_ACCOUNTS,
 ];
 
-/** Creates the default accounts the first time a user needs them. */
+const toRow = (a: Seed, i: number) => ({
+  name: a.name,
+  type: a.type,
+  subtype: a.subtype ?? null,
+  isSystem: Boolean(a.systemKey),
+  systemKey: a.systemKey ?? null,
+  sortOrder: 1000 + i,
+});
+
+/**
+ * Creates the default accounts the first time a user needs them, and adds any
+ * app-managed accounts introduced by later versions (e.g. Depreciation).
+ */
 export async function ensureDefaultAccounts(db: UserDb) {
-  if ((await db.account.count()) > 0) return;
-  await db.account.createMany({
-    data: DEFAULT_ACCOUNTS.map((a, i) => ({
-      name: a.name,
-      type: a.type,
-      subtype: a.subtype ?? null,
-      isSystem: a.isSystem ?? false,
-      sortOrder: i,
-    })) as never,
-  });
+  const existing = await db.account.findMany({ where: { isSystem: true }, select: { systemKey: true } });
+  if (existing.length === 0 && (await db.account.count()) === 0) {
+    await db.account.createMany({ data: DEFAULT_ACCOUNTS.map((a, i) => ({ ...toRow(a, i), sortOrder: i })) as never });
+    return;
+  }
+  const have = new Set(existing.map((a) => a.systemKey));
+  const missing = SYSTEM_ACCOUNTS.filter((a) => !have.has(a.systemKey!));
+  if (missing.length > 0) await db.account.createMany({ data: missing.map(toRow) as never });
+}
+
+/** Finds one of the app-managed accounts. */
+export async function systemAccount(db: Pick<UserDb, "account">, key: SystemKey) {
+  const account = await db.account.findFirst({ where: { systemKey: key } });
+  if (!account) throw new Error(`System account ${key} is missing`);
+  return account;
+}
+
+/** Cash, bank, savings or other "money" account (not a fixed asset). */
+export function isMoneyAccount(a: { type: AccountType; subtype: string | null }) {
+  return a.type === "ASSET" && a.subtype !== FIXED_SUBTYPE;
 }
 
 /**

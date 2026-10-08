@@ -6,6 +6,7 @@ import { hashSecret, newInviteCode, normalizeInviteCode, sha256, verifySecret } 
 import { AUTO_LOCK_MAX, AUTO_LOCK_MIN, INVITE_DAYS, checkPassword, checkPin } from "@/lib/auth/policy";
 import { audit, getCurrentSession, requireAdmin, requireUser } from "@/lib/auth/session";
 import { type FormState, checkEmail, field, normalizeEmail } from "@/lib/auth/validate";
+import { formatMoney, parseMoneyToCents } from "@/lib/format";
 
 async function confirmPassword(passwordHash: string, fd: FormData) {
   const current = fd.get("currentPassword")?.toString() ?? "";
@@ -43,6 +44,15 @@ export async function setAutoLock(_prev: FormState, fd: FormData): Promise<FormS
   await prisma.user.update({ where: { id: user.id }, data: { autoLockMinutes: minutes } });
   revalidatePath("/", "layout");
   return { success: `Auto-lock set to ${minutes} minute${minutes === 1 ? "" : "s"}.` };
+}
+
+export async function setAssetThreshold(_prev: FormState, fd: FormData): Promise<FormState> {
+  const user = await requireUser();
+  const cents = parseMoneyToCents(field(fd, "threshold"));
+  if (cents === null || cents < 0 || cents > 2_000_000_000) return { error: "Enter an amount, e.g. 50,000" };
+  await prisma.user.update({ where: { id: user.id }, data: { assetThresholdCents: cents } });
+  revalidatePath("/", "layout");
+  return { success: `Purchases of ${formatMoney(cents, user.currency)} or more will be suggested as assets.` };
 }
 
 export async function changePassword(_prev: FormState, fd: FormData): Promise<FormState> {

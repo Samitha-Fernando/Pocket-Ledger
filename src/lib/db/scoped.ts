@@ -5,7 +5,7 @@ import type { PrismaClient } from "@/generated/prisma/client";
  * scoped client is automatically limited to one user. When you add a model
  * with a `userId` column, add it here (a test fails if you forget).
  */
-export const USER_OWNED_MODELS = ["AuditLog", "Account", "Entry", "EntryLine"] as const;
+export const USER_OWNED_MODELS = ["AuditLog", "Account", "Entry", "EntryLine", "FixedAsset"] as const;
 
 const OWNED = new Set<string>(USER_OWNED_MODELS);
 
