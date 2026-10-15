@@ -33,6 +33,7 @@ async function main() {
   const { ensureDefaultAccounts } = await import("../src/lib/ledger/accounts");
   const { saveEntry } = await import("../src/lib/ledger/engine");
   const { createAsset } = await import("../src/lib/ledger/assets");
+  const { createLoan, receiveBack } = await import("../src/lib/ledger/loans");
   const { shiftMonth, todayIso } = await import("../src/lib/format");
 
   for (const [index, u] of DEMO_USERS.entries()) {
@@ -81,8 +82,8 @@ async function main() {
       await add({ kind: "INCOME", date: day(28), amount: vary(2_400 * scale), categoryId: acc["Bank Interest"], accountId: acc["Savings account"], details: "Monthly interest" });
       await add({ kind: "TRANSFER", date: day(26), amount: rs(25_000 * scale), fromId: acc["Bank account"], toId: acc["Savings account"], details: "Monthly saving" });
       await add({ kind: "TRANSFER", date: day(27), amount: rs(5_000), fromId: acc["Bank account"], toId: acc["AIA Emergency Fund"], details: "AIA premium" });
-      await add({ kind: "TRANSFER", date: day(3), amount: rs(40_000 * scale), fromId: acc["Bank account"], toId: acc["Cash in hand"], details: "ATM withdrawal" });
-      await add({ kind: "TRANSFER", date: day(17), amount: rs(35_000 * scale), fromId: acc["Bank account"], toId: acc["Cash in hand"], details: "ATM withdrawal" });
+      await add({ kind: "TRANSFER", date: day(3), amount: rs(40_000), fromId: acc["Bank account"], toId: acc["Cash in hand"], details: "ATM withdrawal" });
+      await add({ kind: "TRANSFER", date: day(17), amount: rs(35_000), fromId: acc["Bank account"], toId: acc["Cash in hand"], details: "ATM withdrawal" });
 
       await expense(5, "Utilities", vary(6_800), "Electricity bill", "Bank account");
       await expense(6, "Utilities", vary(1_900), "Water bill", "Bank account");
@@ -138,7 +139,96 @@ async function main() {
         }
       }
     }
-    console.log(`  ${u.name}: ${count} demo transactions, ${assets.length} asset(s)`);
+    // ---- Fake lending & investments ----
+    const daysAgo = (n: number) => {
+      const d = new Date(`${today}T00:00:00Z`);
+      d.setUTCDate(d.getUTCDate() - n);
+      return d.toISOString().slice(0, 10);
+    };
+    let loanCount = 0;
+    if (index === 0) {
+      // Cheque exchange, interest kept up front: hand over 96,000, get 100,000 back (repaid).
+      const kamal = await createLoan(
+        db,
+        {
+          counterparty: "Kamal Silva",
+          kind: "CHEQUE_EXCHANGE",
+          startDate: daysAgo(50),
+          dueDate: daysAgo(20),
+          rateBasisPoints: 400,
+          ratePeriod: "MONTH",
+          interestAccountId: acc["Cheque Exchange Interest"],
+          amount: rs(100_000),
+          upfrontInterest: rs(4_000),
+          fromAccountId: acc["Bank account"],
+          notes: "Demo: cheque no. 004512",
+        },
+        today,
+      );
+      await receiveBack(db, kamal, { date: daysAgo(20), principal: rs(100_000), interest: 0, intoAccountId: acc["Bank account"] }, today);
+      // Normal cheque exchange that's now overdue.
+      await createLoan(
+        db,
+        {
+          counterparty: "Ruwan Fernando",
+          kind: "CHEQUE_EXCHANGE",
+          startDate: daysAgo(40),
+          dueDate: daysAgo(10),
+          rateBasisPoints: 400,
+          ratePeriod: "MONTH",
+          interestAccountId: acc["Cheque Exchange Interest"],
+          amount: rs(80_000),
+          upfrontInterest: 0,
+          fromAccountId: acc["Bank account"],
+          notes: "Demo: post-dated cheque",
+        },
+        today,
+      );
+      // Fixed deposit paying interest monthly.
+      const fdStart = day(0, 5);
+      const fd = await createLoan(
+        db,
+        {
+          counterparty: "Sampath Bank",
+          kind: "FIXED_DEPOSIT",
+          startDate: fdStart,
+          dueDate: `${Number(fdStart.slice(0, 4)) + 1}${fdStart.slice(4)}`,
+          rateBasisPoints: 900,
+          ratePeriod: "YEAR",
+          interestAccountId: acc["Bank Interest"],
+          amount: rs(150_000),
+          upfrontInterest: 0,
+          fromAccountId: acc["Savings account"],
+        },
+        today,
+      );
+      for (let m = 1; m <= 3; m++) {
+        const date = day(m, 5);
+        if (date > today) continue;
+        await saveEntry(db, { kind: "INCOME", date, amount: rs(1_125), categoryId: acc["Bank Interest"], accountId: acc["Savings account"], details: "FD interest", loanId: fd });
+        count++;
+      }
+      loanCount = 3;
+    } else {
+      await createLoan(
+        db,
+        {
+          counterparty: "Nirmala",
+          kind: "PERSONAL_LOAN",
+          startDate: daysAgo(10),
+          dueDate: daysAgo(-20),
+          rateBasisPoints: 0,
+          ratePeriod: "MONTH",
+          amount: rs(25_000),
+          upfrontInterest: 0,
+          fromAccountId: acc["Bank account"],
+          notes: "Demo: school fees, no interest",
+        },
+        today,
+      );
+      loanCount = 1;
+    }
+    console.log(`  ${u.name}: ${count} demo transactions, ${assets.length} asset(s), ${loanCount} loan(s)`);
   }
 
   await prisma.$disconnect();

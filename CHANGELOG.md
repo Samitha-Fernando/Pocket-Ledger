@@ -2,6 +2,31 @@
 
 All notable changes, in plain English. Newest first.
 
+## Phase 3: Lending & investments (2026-10-15)
+
+### Added
+- **Lending & investments register** (Registers → Lending & investments): cheque
+  exchanges, personal loans, fixed deposits and other investments, each with who has
+  the money, rate (per month or per year), due date, status and notes.
+- **Lend / invest**, with optional **interest kept up front** (hand over 96,000 on a
+  100,000 loan; the 4,000 counts as interest that day; 100,000 is owed back).
+- **Money received**: enter the total; it's split into loan repayment and interest
+  automatically (editable). Loans are marked **Repaid** when everything is back.
+- **Lend more**, **write off** (to a new "Bad debts" expense), delete a single money
+  movement (e.g. undo a write-off), edit details, delete a loan.
+- The normal **Income form** can link interest to a loan ("From a loan or investment?").
+- Register totals: money out now, interest earned this year and all-time, overall
+  return; **Overdue** (red) and **Due in the next 30 days** sections. Each loan's page
+  shows lent, paid back, interest received vs expected, return % and every movement.
+- Home "Lent out" tile shows the real total with an overdue warning; Accounts shows a
+  "Lent out & invested" group; History shows lending, money back and write-offs and
+  counts loan interest in monthly income.
+- Demo data: a repaid cheque exchange with interest kept up front, an overdue cheque
+  exchange, a fixed deposit with monthly interest, and a small personal loan.
+- 15 new tests (77 total): every movement balances, the up-front and 104,000 cases,
+  the split, partial repayments, automatic Repaid, write-off and undo, overdue /
+  due-soon, and privacy.
+
 ## Phase 2: Assets (2026-10-08)
 
 ### Added

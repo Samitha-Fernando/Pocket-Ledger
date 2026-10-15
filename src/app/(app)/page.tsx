@@ -3,17 +3,32 @@ import { ChartLineIcon } from "lucide-react";
 import { ComingSoon, PageHeader } from "@/components/coming-soon";
 import { getLedger } from "@/lib/auth/session";
 import { formatIsoDate, formatMonth, formatMoney, todayIso } from "@/lib/format";
-import { FIXED_SUBTYPE, getAccountsWithBalances, isMoneyAccount } from "@/lib/ledger/accounts";
+import { FIXED_SUBTYPE, LENT_SUBTYPE, getAccountsWithBalances, isMoneyAccount } from "@/lib/ledger/accounts";
+import { getLoans } from "@/lib/ledger/loans";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Home" };
 
-function Tile({ label, value, note, href, muted }: { label: string; value: string; note?: string; href?: string; muted?: boolean }) {
+function Tile({
+  label,
+  value,
+  note,
+  href,
+  muted,
+  warn,
+}: {
+  label: string;
+  value: string;
+  note?: string;
+  href?: string;
+  muted?: boolean;
+  warn?: boolean;
+}) {
   const body = (
     <>
       <p className="text-sm text-muted-foreground">{label}</p>
       <p className={cn("mt-1 text-lg font-semibold tabular-nums", muted && "text-muted-foreground/60")}>{value}</p>
-      {note && <p className="mt-1 text-xs text-muted-foreground">{note}</p>}
+      {note && <p className={cn("mt-1 text-xs", warn ? "font-medium text-destructive" : "text-muted-foreground")}>{note}</p>}
     </>
   );
   const className = "rounded-xl border bg-card p-4";
@@ -40,6 +55,8 @@ export default async function HomePage() {
   const cashBank = total((a) => isMoneyAccount(a) && a.subtype !== "SAVINGS");
   const savings = total((a) => a.type === "ASSET" && a.subtype === "SAVINGS");
   const fixedAssets = total((a) => a.subtype === FIXED_SUBTYPE);
+  const lentOut = total((a) => a.subtype === LENT_SUBTYPE);
+  const overdueLoans = (await getLoans(db, today)).filter((l) => l.overdue).length;
   const netWorth = total((a) => a.type === "ASSET") - total((a) => a.type === "LIABILITY");
   const income = total((a) => a.type === "INCOME", monthly);
   // Includes depreciation: a real (non-cash) expense.
@@ -61,7 +78,13 @@ export default async function HomePage() {
         <Tile label="Savings" value={money(savings)} href="/accounts" />
         <Tile label={`Income · ${formatMonth(month).split(" ")[0]}`} value={money(income)} href="/history" />
         <Tile label={`Expenses · ${formatMonth(month).split(" ")[0]}`} value={money(expenses)} href="/history" />
-        <Tile label="Lent out" value={money(BigInt(0))} note="Phase 3" muted />
+        <Tile
+          label="Lent out"
+          value={money(lentOut)}
+          note={overdueLoans ? `⚠ ${overdueLoans} overdue` : "with people & deposits"}
+          href="/loans"
+          warn={overdueLoans > 0}
+        />
         <Tile label="Fixed assets" value={money(fixedAssets)} note="worth today" href="/assets" />
         <Tile label="Debts" value={money(BigInt(0))} note="Phase 4" muted />
       </div>

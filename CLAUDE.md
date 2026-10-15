@@ -16,7 +16,9 @@ Full product brief: `docs/PROJECT_BRIEF.md`. The owner is not a developer.
 - Every protected page/action starts with `requireUser()` / `getUserDb()`; ledger pages use
   `getLedger()` (also ensures system accounts + posts due depreciation).
 - Form entries go through `saveEntry` (`src/lib/ledger/engine.ts`); asset entries
-  (purchase, depreciation, revaluation, sale) only through `src/lib/ledger/assets.ts`.
+  (purchase, depreciation, revaluation, sale) only through `src/lib/ledger/assets.ts`;
+  loan entries (lend, money back, write-off) only through `src/lib/ledger/loans.ts`.
+  Account subtypes FIXED / LENT are not "money" accounts (`isMoneyAccount`).
   System accounts are found by `systemKey`, never by name.
 - Tests share `tests/helpers.ts#resetDb` — add new tables there (children first).
 - Asset photos: `src/lib/uploads.ts` (./uploads, git-ignored), served only via

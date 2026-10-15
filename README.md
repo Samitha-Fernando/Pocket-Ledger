@@ -8,7 +8,7 @@ Under the hood every transaction is **double-entry**: money always moves *from* 
 account *to* another, so balances always reconcile. You never have to think in
 debits and credits; you fill in a simple form and the app records both sides.
 
-> Status: **Phase 2 (assets)** is complete. See [CHANGELOG.md](CHANGELOG.md) and the
+> Status: **Phase 3 (lending & investments)** is complete. See [CHANGELOG.md](CHANGELOG.md) and the
 > full plan in [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md).
 
 ---
@@ -96,6 +96,27 @@ Demo logins (all fake):
   on "Record as asset?") or an asset back to an expense (on its page).
 - Photos are stored in the `uploads/` folder (never committed) and only the owner
   can see them.
+
+## Lending & investments
+
+- **Registers → Lending & investments → Lend** records money you lend or invest:
+  cheque exchanges, personal loans, fixed deposits, other investments.
+- **Interest kept up front**: if you deduct your interest before handing over the
+  money (e.g. lend Rs 100,000 at 4%, hand over Rs 96,000), enter the 4,000 in
+  "Interest kept up front". The loan is recorded at 100,000, only 96,000 leaves
+  your account, and the 4,000 counts as interest earned that day.
+- **Money received**: enter the total you got back. The app pays off the loan first
+  and treats anything extra as interest (e.g. 104,000 on a 100,000 loan → 4,000
+  interest). You can change the split. When everything is back, the loan is
+  marked **Repaid** automatically.
+- Interest paid separately (e.g. monthly fixed-deposit interest) can be recorded with
+  the normal Income form: choose the loan under "From a loan or investment?".
+- **Write off** money that isn't coming back; it becomes a "Bad debts" expense.
+  Delete the write-off later if they do pay.
+- The register shows money out now, interest earned this year and all-time, the
+  overall return, **overdue** loans (in red) and those **due in the next 30 days**.
+  Home shows a warning when something is overdue.
+- Rates can be per month (default for cheque exchange) or per year (fixed deposits).
 
 ## How sign-in and privacy work
 

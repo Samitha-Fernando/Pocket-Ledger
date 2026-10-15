@@ -2,7 +2,8 @@ import Link from "next/link";
 import { ChevronRightIcon, CreditCardIcon, HandCoinsIcon, PackageIcon } from "lucide-react";
 import { PageHeader } from "@/components/coming-soon";
 import { getLedger } from "@/lib/auth/session";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, todayIso } from "@/lib/format";
+import { getLoans } from "@/lib/ledger/loans";
 import { getRawBalances } from "@/lib/ledger/accounts";
 import { cn } from "@/lib/utils";
 
@@ -10,10 +11,14 @@ export const metadata = { title: "Registers" };
 
 export default async function RegistersPage() {
   const { user, db } = await getLedger();
-  const [assets, balances] = await Promise.all([
+  const [assets, balances, loans] = await Promise.all([
     db.fixedAsset.findMany({ where: { status: "ACTIVE" }, select: { accountId: true } }),
     getRawBalances(db),
+    getLoans(db, todayIso(user.timezone)),
   ]);
+  const active = loans.filter((l) => l.loan.status === "ACTIVE");
+  const out = active.reduce((s, l) => s + l.out, BigInt(0));
+  const overdue = active.filter((l) => l.overdue).length;
   const assetValue = assets.reduce((s, a) => s + (balances.get(a.accountId) ?? BigInt(0)), BigInt(0));
 
   const registers = [
@@ -24,7 +29,13 @@ export default async function RegistersPage() {
       text: `${assets.length} owned · worth ${formatMoney(assetValue, user.currency)}`,
       ready: true,
     },
-    { href: "", icon: HandCoinsIcon, title: "Lending & investments", text: "Coming in Phase 3", ready: false },
+    {
+      href: "/loans",
+      icon: HandCoinsIcon,
+      title: "Lending & investments",
+      text: `${active.length} active · ${formatMoney(out, user.currency)} out${overdue ? ` · ${overdue} overdue` : ""}`,
+      ready: true,
+    },
     { href: "", icon: CreditCardIcon, title: "Credit cards & loans", text: "Coming in Phase 4", ready: false },
   ];
 

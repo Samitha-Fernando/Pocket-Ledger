@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeftIcon, PackageIcon } from "lucide-react";
+import { ChevronLeftIcon, HandCoinsIcon, PackageIcon } from "lucide-react";
 import { PageHeader } from "@/components/coming-soon";
 import { EntryForm } from "@/components/entry-form";
 import { EntryRow } from "@/components/entry-row";
@@ -20,7 +20,7 @@ export default async function EditEntryPage({ params }: PageProps<"/history/[id]
   const { id } = await params;
   const raw = await db.entry.findUnique({
     where: { id },
-    include: { lines: { include: { account: true } }, asset: { select: { name: true } } },
+    include: { lines: { include: { account: true } }, asset: { select: { name: true } }, loan: { select: { counterparty: true } } },
   });
   if (!raw) notFound();
   const entry = describeEntry(raw);
@@ -33,8 +33,13 @@ export default async function EditEntryPage({ params }: PageProps<"/history/[id]
     </Link>
   );
 
-  // Asset purchases, depreciation, value changes and sales are managed on the asset's page.
+  // Asset and loan entries are managed on the asset's / loan's own page.
   if (!FORM_KINDS.includes(raw.kind)) {
+    const owner = raw.loanId
+      ? { href: `/loans/${raw.loanId}`, label: entry.loanName ?? "loan", what: "lending register", icon: HandCoinsIcon }
+      : raw.assetId
+        ? { href: `/assets/${raw.assetId}`, label: entry.assetName ?? "asset", what: "asset register", icon: PackageIcon }
+        : null;
     return (
       <div className="mx-auto max-w-xl">
         {back}
@@ -43,11 +48,11 @@ export default async function EditEntryPage({ params }: PageProps<"/history/[id]
           <EntryRow entry={entry} currency={user.currency} />
         </div>
         <p className="mb-4 text-sm text-muted-foreground">
-          This was recorded automatically by the asset register. To change it, open the asset.
+          This is part of the {owner?.what ?? "registers"}. To change or remove it, open its page.
         </p>
-        {raw.assetId && (
-          <Button className="h-11 gap-2" render={<Link href={`/assets/${raw.assetId}`} />} nativeButton={false}>
-            <PackageIcon /> Open {entry.assetName ?? "asset"}
+        {owner && (
+          <Button className="h-11 gap-2" render={<Link href={owner.href} />} nativeButton={false}>
+            <owner.icon /> Open {owner.label}
           </Button>
         )}
       </div>

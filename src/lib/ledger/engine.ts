@@ -12,7 +12,15 @@ import { isMoneyAccount } from "./accounts";
 export class LedgerError extends Error {}
 
 export type EntryInput =
-  | { kind: "INCOME"; date: string; amount: number; categoryId: string; accountId: string; details?: string | null }
+  | {
+      kind: "INCOME";
+      date: string;
+      amount: number;
+      categoryId: string;
+      accountId: string;
+      details?: string | null;
+      loanId?: string | null; // e.g. interest from a cheque exchange
+    }
   | {
       kind: "EXPENSE";
       date: string;
@@ -78,7 +86,14 @@ export function assertBalanced(lines: Line[]) {
  */
 export async function postEntry(
   tx: Tx,
-  header: { kind: EntryKind; date: string; details?: string | null; assetId?: string | null; depMonth?: string | null },
+  header: {
+    kind: EntryKind;
+    date: string;
+    details?: string | null;
+    assetId?: string | null;
+    depMonth?: string | null;
+    loanId?: string | null;
+  },
   lines: Line[],
 ) {
   assertBalanced(lines);
@@ -89,6 +104,7 @@ export async function postEntry(
       details: header.details?.trim() || null,
       assetId: header.assetId ?? null,
       depMonth: header.depMonth ?? null,
+      loanId: header.loanId ?? null,
     } as never,
   });
   await tx.entryLine.createMany({ data: lines.map((l) => ({ ...l, entryId: entry.id })) as never });
@@ -154,17 +170,20 @@ function accountIds(input: EntryInput) {
 export async function saveEntry(db: UserDb, input: EntryInput, entryId?: string) {
   const ids = accountIds(input);
   const assetId = input.kind === "EXPENSE" ? input.assetId || null : null;
-  const [found, opening, existing, asset] = await Promise.all([
+  const loanId = input.kind === "INCOME" ? input.loanId || null : null;
+  const [found, opening, existing, asset, loan] = await Promise.all([
     db.account.findMany({ where: { id: { in: ids } } }),
     input.kind === "OPENING_BALANCE" ? db.account.findFirst({ where: { systemKey: "OPENING" } }) : Promise.resolve(null),
     entryId ? db.entry.findUnique({ where: { id: entryId }, include: { lines: true } }) : Promise.resolve(null),
     assetId ? db.fixedAsset.findUnique({ where: { id: assetId } }) : Promise.resolve(null),
+    loanId ? db.loan.findUnique({ where: { id: loanId } }) : Promise.resolve(null),
   ]);
   if (entryId && !existing) throw new LedgerError("That transaction no longer exists.");
   if (existing && !FORM_KINDS.includes(existing.kind)) {
     throw new LedgerError("This transaction is managed from its asset's page.");
   }
   if (assetId && !asset) throw new LedgerError("Choose a valid asset to link.");
+  if (loanId && !loan) throw new LedgerError("Choose a valid loan or investment to link.");
 
   // When editing, accounts already on the entry may stay even if archived since.
   const keepArchived = new Set(existing?.lines.map((l) => l.accountId) ?? []);
@@ -173,14 +192,14 @@ export async function saveEntry(db: UserDb, input: EntryInput, entryId?: string)
   const lines = buildLines(input, opening?.id);
   assertBalanced(lines);
 
-  const header = { kind: input.kind as EntryKind, date: input.date, details: input.details, assetId };
+  const header = { kind: input.kind as EntryKind, date: input.date, details: input.details, assetId, loanId };
 
   return db.$transaction(async (tx) => {
     if (!existing) return postEntry(tx, header, lines);
     // Editing keeps the same transaction (id, "added" time); only its lines are replaced.
     await tx.entry.update({
       where: { id: existing.id },
-      data: { kind: header.kind, date: header.date, details: header.details?.trim() || null, assetId },
+      data: { kind: header.kind, date: header.date, details: header.details?.trim() || null, assetId, loanId },
     });
     await tx.entryLine.deleteMany({ where: { entryId: existing.id } });
     await tx.entryLine.createMany({ data: lines.map((l) => ({ ...l, entryId: existing.id })) as never });

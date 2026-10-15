@@ -43,6 +43,13 @@ const ACTION_LABELS: Record<string, string> = {
   asset_sold: "Asset sold",
   asset_disposed: "Asset scrapped / given away",
   asset_sale_undone: "Asset sale undone",
+  loan_created: "Money lent / invested",
+  loan_updated: "Loan details edited",
+  loan_lent_more: "Lent more",
+  loan_money_back: "Money received back",
+  loan_written_off: "Loan written off",
+  loan_movement_deleted: "Loan money movement deleted",
+  loan_deleted: "Loan deleted",
 };
 
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {

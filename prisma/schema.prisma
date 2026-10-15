@@ -46,6 +46,7 @@ model User {
   entries        Entry[]
   entryLines     EntryLine[]
   fixedAssets    FixedAsset[]
+  loans          Loan[]
 }
 
 // ---- Ledger (double-entry) ---------------------------------------------------
@@ -66,9 +67,9 @@ model Account {
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
   type      AccountType
-  subtype   String? // ASSET: CASH | BANK | SAVINGS | OTHER | FIXED (a fixed asset)
+  subtype   String? // ASSET: CASH | BANK | SAVINGS | OTHER | FIXED (a fixed asset) | LENT (a loan/investment)
   isSystem  Boolean     @default(false) // created and managed by the app (e.g. Opening Balances)
-  systemKey String? // which app-managed account: OPENING | DEPRECIATION | ASSET_GAIN | ASSET_LOSS
+  systemKey String? // which app-managed account: OPENING | DEPRECIATION | ASSET_GAIN | ASSET_LOSS | BAD_DEBTS
   archived  Boolean     @default(false)
   sortOrder Int         @default(0)
   createdAt DateTime    @default(now())
@@ -76,6 +77,7 @@ model Account {
 
   lines      EntryLine[]
   fixedAsset FixedAsset?
+  loan       Loan?
 
   @@index([userId, type])
 }
@@ -89,6 +91,35 @@ enum EntryKind {
   DEPRECIATION
   ASSET_REVALUATION
   ASSET_SALE
+  LEND // money lent / invested (optionally with interest kept up front)
+  LOAN_RETURN // money received back: principal + any interest
+  LOAN_WRITE_OFF // money that isn't coming back
+}
+
+// Lending & investments register: one row per loan / cheque exchange / deposit.
+// "Still out" is the balance of its own ledger account.
+model Loan {
+  id                String  @id @default(cuid())
+  userId            String
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId         String  @unique
+  account           Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  counterparty      String // who has the money: a person, bank or company
+  kind              String // CHEQUE_EXCHANGE | PERSONAL_LOAN | FIXED_DEPOSIT | OTHER
+  startDate         String // "YYYY-MM-DD"
+  dueDate           String?
+  rateBasisPoints   Int     @default(0) // 4% = 400 (no floating point)
+  ratePeriod        String  @default("MONTH") // MONTH | YEAR
+  interestAccountId String? // income category used for this loan's interest by default
+  status            String  @default("ACTIVE") // ACTIVE | REPAID | WRITTEN_OFF
+  closedDate        String?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  entries Entry[]
+
+  @@index([userId, status])
 }
 
 // Asset register: one row per thing you own (bike, phone, laptop…).
@@ -129,6 +160,9 @@ model Entry {
   // Link to an asset: its purchase, depreciation, value change, sale, or a repair.
   assetId   String?
   asset     FixedAsset? @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  // Link to a loan/investment: lending, money back, interest, write-off.
+  loanId    String?
+  loan      Loan?       @relation(fields: [loanId], references: [id], onDelete: SetNull)
   depMonth  String? // "YYYY-MM" for depreciation entries (stops double-posting)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

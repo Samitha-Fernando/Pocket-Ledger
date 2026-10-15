@@ -114,6 +114,7 @@ export function EntryForm({
   // null = decide automatically from the amount (new purchases only).
   const [recordAsAsset, setRecordAsAsset] = useState<boolean | null>(assetOnly ? true : editing ? false : null);
   const [linkedAssetId, setLinkedAssetId] = useState(entry?.kind === "EXPENSE" ? entry.assetId ?? "" : "");
+  const [linkedLoanId, setLinkedLoanId] = useState(entry?.kind === "INCOME" ? entry.loanId ?? "" : "");
 
   const [amount, setAmount] = useState(entry ? centsToInput(entry.amount) : "");
   const [date, setDate] = useState(entry?.date ?? today);
@@ -264,6 +265,22 @@ export function EntryForm({
         <>
           <CategoryPicker options={data.incomeCategories} value={incomeCat} onChange={setIncomeCat} />
           <AccountSelect label="Received into" name="accountId" options={data.assets} value={receiveInto} onChange={setReceiveInto} currency={currency} />
+          {data.loans.length > 0 && (
+            <div className="grid gap-1.5">
+              <Label htmlFor="linkedLoanId">From a loan or investment? (optional)</Label>
+              <select id="linkedLoanId" name="linkedLoanId" value={linkedLoanId} onChange={(e) => setLinkedLoanId(e.target.value)} className={selectClass}>
+                <option value="">Not linked</option>
+                {data.loans
+                  .filter((l) => l.active || l.id === linkedLoanId)
+                  .map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name}
+                    </option>
+                  ))}
+              </select>
+              <p className="text-xs text-muted-foreground">Link interest to the loan or deposit it came from to see its return.</p>
+            </div>
+          )}
         </>
       )}
       {kind === "TRANSFER" && (

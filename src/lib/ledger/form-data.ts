@@ -1,13 +1,15 @@
 import type { UserDb } from "@/lib/db/scoped";
 import { getAccountsWithBalances, isMoneyAccount } from "./accounts";
+import { LOAN_KINDS } from "./loan-kinds";
 
 export type Option = { id: string; name: string; archived: boolean; balance: number };
 
 /** Everything the Add/Edit transaction form needs, as plain serialisable data. */
 export async function getFormData(db: UserDb, assetThresholdCents: number) {
-  const [accounts, fixedAssets, lastIncome, lastExpense, lastTransfer] = await Promise.all([
+  const [accounts, fixedAssets, loans, lastIncome, lastExpense, lastTransfer] = await Promise.all([
     getAccountsWithBalances(db),
     db.fixedAsset.findMany({ select: { id: true, name: true, status: true }, orderBy: { purchaseDate: "desc" } }),
+    db.loan.findMany({ select: { id: true, counterparty: true, kind: true, status: true }, orderBy: { startDate: "desc" } }),
     lastLines(db, "INCOME"),
     lastLines(db, "EXPENSE"),
     lastLines(db, "TRANSFER"),
@@ -33,6 +35,12 @@ export async function getFormData(db: UserDb, assetThresholdCents: number) {
     expenseCategories: categories("EXPENSE"),
     // For linking a repair to the thing it was for.
     fixedAssets: fixedAssets.map((a) => ({ id: a.id, name: a.name, active: a.status === "ACTIVE" })),
+    // For linking interest received to the loan / deposit it came from.
+    loans: loans.map((l) => ({
+      id: l.id,
+      name: `${l.counterparty} (${LOAN_KINDS[l.kind as keyof typeof LOAN_KINDS]?.label.toLowerCase() ?? "loan"})`,
+      active: l.status === "ACTIVE",
+    })),
     assetThreshold: assetThresholdCents,
     // The account used last time for each form, so it's pre-selected next time.
     defaults: {

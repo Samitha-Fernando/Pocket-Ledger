@@ -28,14 +28,18 @@ function withRunningBalance<L extends { amount: bigint; entry: EntryWithLines }>
 export default async function AccountPage({ params }: PageProps<"/accounts/[id]">) {
   const { user, db } = await getLedger();
   const { id } = await params;
-  const account = await db.account.findUnique({ where: { id }, include: { fixedAsset: { select: { id: true } } } });
+  const account = await db.account.findUnique({
+    where: { id },
+    include: { fixedAsset: { select: { id: true } }, loan: { select: { id: true } } },
+  });
   if (!account) notFound();
-  // A fixed asset's account is shown on its asset page.
+  // Fixed assets and loans are shown on their own register pages.
   if (account.fixedAsset) redirect(`/assets/${account.fixedAsset.id}`);
+  if (account.loan) redirect(`/loans/${account.loan.id}`);
 
   const lines = await db.entryLine.findMany({
     where: { accountId: id },
-    include: { entry: { include: { lines: { include: { account: true } }, asset: { select: { name: true } } } } },
+    include: { entry: { include: { lines: { include: { account: true } }, asset: { select: { name: true } }, loan: { select: { counterparty: true } } } } },
     orderBy: [{ entry: { date: "asc" } }, { entry: { createdAt: "asc" } }],
   });
 

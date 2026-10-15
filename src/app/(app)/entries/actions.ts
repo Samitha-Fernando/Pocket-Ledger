@@ -19,7 +19,15 @@ function readEntry(fd: FormData): EntryInput | string {
 
   switch (kind) {
     case "INCOME":
-      return { kind, date, amount, details, categoryId: field(fd, "categoryId"), accountId: field(fd, "accountId") };
+      return {
+        kind,
+        date,
+        amount,
+        details,
+        categoryId: field(fd, "categoryId"),
+        accountId: field(fd, "accountId"),
+        loanId: field(fd, "linkedLoanId") || null,
+      };
     case "EXPENSE":
       return {
         kind,

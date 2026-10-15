@@ -12,10 +12,13 @@ export type AssetSubtype = keyof typeof ASSET_SUBTYPES;
 export const OPENING_BALANCES_NAME = "Opening Balances";
 
 /** Accounts the app manages itself (people can't post to them by hand). */
-export type SystemKey = "OPENING" | "DEPRECIATION" | "ASSET_GAIN" | "ASSET_LOSS";
+export type SystemKey = "OPENING" | "DEPRECIATION" | "ASSET_GAIN" | "ASSET_LOSS" | "BAD_DEBTS";
 
 /** Subtype of the ledger account behind each fixed asset. */
 export const FIXED_SUBTYPE = "FIXED";
+
+/** Subtype of the ledger account behind each loan / investment. */
+export const LENT_SUBTYPE = "LENT";
 
 type Seed = { name: string; type: AccountType; subtype?: AssetSubtype; systemKey?: SystemKey };
 
@@ -23,6 +26,7 @@ const SYSTEM_ACCOUNTS: Seed[] = [
   { name: "Depreciation", type: "EXPENSE", systemKey: "DEPRECIATION" },
   { name: "Gain on assets", type: "INCOME", systemKey: "ASSET_GAIN" },
   { name: "Loss on assets", type: "EXPENSE", systemKey: "ASSET_LOSS" },
+  { name: "Bad debts", type: "EXPENSE", systemKey: "BAD_DEBTS" },
   { name: OPENING_BALANCES_NAME, type: "EQUITY", systemKey: "OPENING" },
 ];
 
@@ -88,9 +92,9 @@ export async function systemAccount(db: Pick<UserDb, "account">, key: SystemKey)
   return account;
 }
 
-/** Cash, bank, savings or other "money" account (not a fixed asset). */
+/** Cash, bank, savings or other "money" account (not a fixed asset or money lent out). */
 export function isMoneyAccount(a: { type: AccountType; subtype: string | null }) {
-  return a.type === "ASSET" && a.subtype !== FIXED_SUBTYPE;
+  return a.type === "ASSET" && a.subtype !== FIXED_SUBTYPE && a.subtype !== LENT_SUBTYPE;
 }
 
 /**

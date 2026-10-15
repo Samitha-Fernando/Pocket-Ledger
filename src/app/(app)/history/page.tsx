@@ -18,14 +18,17 @@ export default async function HistoryPage({ searchParams }: PageProps<"/history"
   const entries = (
     await db.entry.findMany({
       where: { date: { gte: `${month}-01`, lte: `${month}-31` } },
-      include: { lines: { include: { account: true } }, asset: { select: { name: true } } },
+      include: { lines: { include: { account: true } }, asset: { select: { name: true } }, loan: { select: { counterparty: true } } },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     })
   ).map(describeEntry);
 
-  const income = entries.filter((e) => e.kind === "INCOME").reduce((s, e) => s + e.amount, 0);
-  // Depreciation is a real (non-cash) expense, so it counts too.
-  const expenses = entries.filter((e) => e.kind === "EXPENSE" || e.kind === "DEPRECIATION").reduce((s, e) => s + e.amount, 0);
+  // Income includes interest earned on loans (kept up front or received with the money back).
+  const income = entries.reduce((s, e) => s + (e.kind === "INCOME" ? e.amount : (e.interestAmount ?? 0)), 0);
+  // Depreciation and written-off loans are real (non-cash) expenses, so they count too.
+  const expenses = entries
+    .filter((e) => e.kind === "EXPENSE" || e.kind === "DEPRECIATION" || e.kind === "LOAN_WRITE_OFF")
+    .reduce((s, e) => s + e.amount, 0);
 
   // Group by day, newest first.
   const days = new Map<string, typeof entries>();
