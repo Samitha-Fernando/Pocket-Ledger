@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronLeftIcon, ChevronRightIcon, ReceiptTextIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon, FileSpreadsheetIcon, ReceiptTextIcon } from "lucide-react";
 import { PageHeader } from "@/components/coming-soon";
 import { EntryRow } from "@/components/entry-row";
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,12 @@ export default async function HistoryPage({ searchParams }: PageProps<"/history"
 
   return (
     <>
-      <PageHeader title="History" />
+      <div className="flex items-start justify-between gap-3">
+        <PageHeader title="History" />
+        <Button variant="outline" className="h-10 gap-1.5" render={<Link href="/import" />} nativeButton={false}>
+          <FileSpreadsheetIcon /> Import
+        </Button>
+      </div>
 
       <div className="mb-4 flex items-center justify-between gap-2">
         <Button variant="outline" size="icon-lg" aria-label="Previous month" render={<Link href={`/history?month=${shiftMonth(month, -1)}`} />} nativeButton={false}>

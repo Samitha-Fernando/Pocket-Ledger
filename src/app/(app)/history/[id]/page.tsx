@@ -20,10 +20,32 @@ export default async function EditEntryPage({ params }: PageProps<"/history/[id]
   const { id } = await params;
   const raw = await db.entry.findUnique({
     where: { id },
-    include: { lines: { include: { account: true } }, asset: { select: { name: true } }, loan: { select: { counterparty: true } } },
+    include: {
+      lines: { include: { account: true } },
+      asset: { select: { name: true } },
+      loan: { select: { counterparty: true } },
+      importRow: { select: { rowNumber: true, raw: true, batch: { select: { id: true, fileName: true } } } },
+    },
   });
   if (!raw) notFound();
   const entry = describeEntry(raw);
+  // Where it came from, if it was imported from a spreadsheet (kept for audit).
+  const original = raw.importRow ? (JSON.parse(raw.importRow.raw) as Record<string, unknown>) : null;
+  const imported = raw.importRow && original && (
+    <div className="mt-4 rounded-xl border bg-muted/40 p-3 text-xs text-muted-foreground">
+      <p className="mb-1 font-medium text-foreground">
+        Imported from row {raw.importRow.rowNumber} of{" "}
+        <Link href={`/import/${raw.importRow.batch.id}`} className="underline underline-offset-2">
+          {raw.importRow.batch.fileName}
+        </Link>
+      </p>
+      <p className="break-words">
+        {Object.entries(original)
+          .map(([k, v]) => `${k}: ${v ?? "—"}`)
+          .join(" · ")}
+      </p>
+    </div>
+  );
   const back = (
     <Link
       href={`/history?month=${entry.date.slice(0, 7)}`}
@@ -52,6 +74,7 @@ export default async function EditEntryPage({ params }: PageProps<"/history/[id]
         <p className="mb-4 text-sm text-muted-foreground">
           This is part of the {owner?.what ?? "registers"}. To change or remove it, open its page.
         </p>
+        {imported}
         {owner && (
           <Button className="h-11 gap-2" render={<Link href={owner.href} />} nativeButton={false}>
             <owner.icon /> Open {owner.label}
@@ -75,6 +98,7 @@ export default async function EditEntryPage({ params }: PageProps<"/history/[id]
           <DeleteEntryButton entryId={entry.id} />
         </CardContent>
       </Card>
+      {imported}
       {entry.kind === "EXPENSE" && (
         <p className="mt-3 text-center text-xs text-muted-foreground">
           Bought something that lasts? Switch on &ldquo;Record as asset?&rdquo; above to convert this expense into an asset.

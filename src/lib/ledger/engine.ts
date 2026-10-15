@@ -94,6 +94,7 @@ export async function postEntry(
     depMonth?: string | null;
     loanId?: string | null;
     debtId?: string | null;
+    importRowId?: string | null; // spreadsheet row it came from
   },
   lines: Line[],
 ) {
@@ -107,6 +108,7 @@ export async function postEntry(
       depMonth: header.depMonth ?? null,
       loanId: header.loanId ?? null,
       debtId: header.debtId ?? null,
+      importRowId: header.importRowId ?? null,
     } as never,
   });
   await tx.entryLine.createMany({ data: lines.map((l) => ({ ...l, entryId: entry.id })) as never });
@@ -169,7 +171,7 @@ function accountIds(input: EntryInput) {
  * `db` is the user-scoped client, so only the user's own accounts are visible:
  * an account id belonging to someone else is simply "not found".
  */
-export async function saveEntry(db: UserDb, input: EntryInput, entryId?: string) {
+export async function saveEntry(db: UserDb, input: EntryInput, entryId?: string, opts: { importRowId?: string } = {}) {
   const ids = accountIds(input);
   const assetId = input.kind === "EXPENSE" ? input.assetId || null : null;
   const loanId = input.kind === "INCOME" ? input.loanId || null : null;
@@ -196,7 +198,7 @@ export async function saveEntry(db: UserDb, input: EntryInput, entryId?: string)
   const lines = buildLines(input, opening?.id);
   assertBalanced(lines);
 
-  const header = { kind: input.kind as EntryKind, date: input.date, details: input.details, assetId, loanId };
+  const header = { kind: input.kind as EntryKind, date: input.date, details: input.details, assetId, loanId, importRowId: opts.importRowId };
 
   return db.$transaction(async (tx) => {
     if (!existing) return postEntry(tx, header, lines);

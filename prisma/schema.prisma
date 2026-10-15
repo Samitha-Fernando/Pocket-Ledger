@@ -34,6 +34,8 @@ model User {
   timezone        String @default("Asia/Colombo")
   // Purchases at or above this (in cents) default to "record as asset". Rs 50,000.
   assetThresholdCents Int @default(5000000)
+  // "Late income shift": income on/after this day of the month counts toward next month (null = off).
+  lateIncomeDay       Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -48,6 +50,8 @@ model User {
   fixedAssets    FixedAsset[]
   loans          Loan[]
   debts          Debt[]
+  importBatches  ImportBatch[]
+  importRows     ImportRow[]
 }
 
 // ---- Ledger (double-entry) ---------------------------------------------------
@@ -199,6 +203,9 @@ model Entry {
   // Link to a card / loan you owe: starting balance, borrowing, payment, charge.
   debtId    String?
   debt      Debt?       @relation(fields: [debtId], references: [id], onDelete: SetNull)
+  // The spreadsheet row this transaction was imported from (kept for audit).
+  importRowId String?    @unique
+  importRow   ImportRow? @relation(fields: [importRowId], references: [id], onDelete: SetNull)
   depMonth  String? // "YYYY-MM" for depreciation entries (stops double-posting)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -283,4 +290,59 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+// ---- Excel import -------------------------------------------------------------
+
+// One uploaded spreadsheet. Rows are staged (nothing posted) until you post them.
+model ImportBatch {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileName         String
+  status           String   @default("STAGED") // STAGED | POSTED | UNDONE
+  accountId        String? // the money account the sheet tracked
+  startingBalance  BigInt? // cents, posted as an opening balance
+  startingDate     String?
+  openingEntryId   String? // the opening-balance entry this import created
+  mapping          String   @default("{}") // JSON: "Type / Category" → target
+  lateIncomeDay    Int? // read from the sheet's Settings
+  postedAt         DateTime?
+  createdAt        DateTime @default(now())
+
+  rows ImportRow[]
+
+  @@index([userId, createdAt])
+}
+
+// One spreadsheet row, exactly as read, plus what it will become.
+model ImportRow {
+  id          String  @id @default(cuid())
+  userId      String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  batchId     String
+  batch       ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  rowNumber   Int // row number in the sheet
+  fingerprint String // same row in a later upload → same fingerprint (no duplicates)
+  raw         String // JSON of the original cells
+  date        String?
+  type        String // Income | Expenses | Savings | ...
+  category    String
+  amount      BigInt? // cents
+  details     String?
+  // What to do: EXPENSE | INCOME | TRANSFER | ASSET | DEBT_PAYMENT | SKIP | REVIEW
+  action      String  @default("REVIEW")
+  targetId    String? // category / savings account / debt, depending on action
+  manual      Boolean @default(false) // changed by hand (mapping changes won't override it)
+  assetName   String?
+  assetClass  String?
+  lifeMonths  Int?
+  loanId      String? // cheque-exchange interest linked to a loan
+  note        String? // why it needs attention
+  duplicate   Boolean @default(false) // already imported in an earlier batch
+
+  entry Entry?
+
+  @@index([batchId, rowNumber])
+  @@index([userId, fingerprint])
 }

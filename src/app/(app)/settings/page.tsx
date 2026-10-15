@@ -8,7 +8,8 @@ import { getUserDb } from "@/lib/auth/session";
 import { centsToInput, formatDate, formatDateTime } from "@/lib/format";
 import { signOutAction, switchUserAction } from "../../(auth)/actions";
 import { removePin, revokeInvite } from "./actions";
-import { AssetThresholdForm, AutoLockForm, InviteForm, PasswordForm, PinForm } from "./forms";
+import { AssetThresholdForm, AutoLockForm, InviteForm, LateIncomeForm, PasswordForm, PinForm } from "./forms";
+import Link from "next/link";
 
 export const metadata = { title: "Settings" };
 
@@ -57,6 +58,10 @@ const ACTION_LABELS: Record<string, string> = {
   debt_charge: "Interest / fees charged",
   debt_movement_deleted: "Card / loan movement deleted",
   debt_deleted: "Card / loan deleted",
+  import_uploaded: "Spreadsheet uploaded",
+  import_posted: "Import posted",
+  import_undone: "Import undone",
+  import_deleted: "Import deleted",
 };
 
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
@@ -152,6 +157,19 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
           description="When you add an expense this big or bigger, the app switches on &ldquo;Record as asset?&rdquo; for you. You can always change it per purchase."
         >
           <AssetThresholdForm value={centsToInput(user.assetThresholdCents)} />
+        </Section>
+
+        <Section
+          title="Late income shift"
+          description="If your salary arrives near the end of the month (e.g. the 25th), reports can count it as next month's money."
+        >
+          <LateIncomeForm day={user.lateIncomeDay} />
+        </Section>
+
+        <Section title="Import" description="Bring in your history from an Excel budget sheet.">
+          <Button variant="outline" className="h-11" render={<Link href="/import" />} nativeButton={false}>
+            Import from Excel
+          </Button>
         </Section>
 
         <Section title="Appearance">

@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { CheckIcon, CopyIcon } from "lucide-react";
 import { Field, FormMessage, SubmitButton } from "@/components/form-bits";
 import { Button } from "@/components/ui/button";
-import { changePassword, createInvite, setAssetThreshold, setAutoLock, setPin } from "./actions";
+import { changePassword, createInvite, setAssetThreshold, setAutoLock, setLateIncome, setPin } from "./actions";
 
 export function PinForm({ hasPin }: { hasPin: boolean }) {
   const [state, action] = useActionState(setPin, undefined);
@@ -40,6 +40,23 @@ export function AssetThresholdForm({ value }: { value: string }) {
     <form action={action} className="grid gap-4">
       <div className="flex items-end gap-3">
         <Field label="Suggest &ldquo;record as asset&rdquo; from (Rs)" name="threshold" inputMode="decimal" defaultValue={value} className="flex-1" required />
+        <SubmitButton className="w-auto">Save</SubmitButton>
+      </div>
+      <FormMessage state={state} />
+    </form>
+  );
+}
+
+export function LateIncomeForm({ day }: { day: number | null }) {
+  const [state, action] = useActionState(setLateIncome, undefined);
+  return (
+    <form action={action} className="grid gap-4">
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="enabled" defaultChecked={day !== null} className="size-4 accent-primary" />
+        Count late income toward the next month
+      </label>
+      <div className="flex items-end gap-3">
+        <Field label="From day of the month" name="day" type="number" min={1} max={31} defaultValue={day ?? 25} className="flex-1" />
         <SubmitButton className="w-auto">Save</SubmitButton>
       </div>
       <FormMessage state={state} />

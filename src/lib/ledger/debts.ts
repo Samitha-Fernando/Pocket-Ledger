@@ -267,7 +267,15 @@ export async function borrowMore(
 export async function makePayment(
   db: UserDb,
   debtId: string,
-  input: { date: string; principal: number; interest: number; fromAccountId: string; interestAccountId?: string | null; details?: string | null },
+  input: {
+    date: string;
+    principal: number;
+    interest: number;
+    fromAccountId: string;
+    interestAccountId?: string | null;
+    details?: string | null;
+    importRowId?: string | null; // spreadsheet row it came from
+  },
   today: string,
 ) {
   checkDate(input.date, today);
@@ -283,7 +291,7 @@ export async function makePayment(
     const interest = input.interest > 0 ? await expenseCategory(tx, input.interestAccountId) : null;
     await postEntry(
       tx,
-      { kind: "DEBT_PAYMENT", date: input.date, debtId, details: input.details || null },
+      { kind: "DEBT_PAYMENT", date: input.date, debtId, details: input.details || null, importRowId: input.importRowId },
       paymentLines({ money: input.fromAccountId, debt: debt.accountId, interest: interest?.id ?? "" }, BigInt(input.principal), BigInt(input.interest)),
     );
     return refreshStatus(tx, debtId);

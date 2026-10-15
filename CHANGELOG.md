@@ -2,6 +2,33 @@
 
 All notable changes, in plain English. Newest first.
 
+## Phase 5 Part A: Excel import (2026-10-15)
+
+### Added
+- **Import from Excel** (History → Import, or Settings → Import). Reads the "Budget
+  Tracking" table of "Personal Budget Tracker" (or any sheet with Date / Type /
+  Category / Amount / Details columns); formula cells use their calculated values.
+  The file is read in memory and not kept.
+- **Three steps**: (1) Categories: tracked account, starting balance, and what each
+  spreadsheet "Type / Category" becomes, with smart defaults (savings → transfers,
+  big asset purchases → assets, debt → you choose; "Fun & vacation" matches "Fun &
+  Vacation", etc.); new categories can be created; (2) Review: filters (needs a
+  decision, assets, debt, skipped, already imported), search, per-row and bulk changes,
+  asset name/class/life per row, link interest to a loan; (3) Post: spreadsheet vs
+  posted totals per category, with ✓ when they match.
+- **No duplicates**: re-uploading only adds new rows (identical repeated rows are
+  told apart). **Undo** a whole import, including assets it bought.
+- Each imported transaction keeps its **original spreadsheet row**, shown on its page.
+- **Late income shift** setting (Settings), copied from your spreadsheet if you choose.
+- SheetJS 0.20.3 installed from the official SheetJS site.
+- 15 new tests (111 total) using a fake workbook laid out like the real one.
+
+### Checked
+- Dry run of the real spreadsheet into a throwaway database: 855 rows read, 854
+  posted (1 blank amount skipped), 0 errors, every category total matches, 0
+  unbalanced transactions, no account below zero with a starting balance of 0,
+  undo removed everything.
+
 ## Phase 4: Credit cards & loans (2026-10-15)
 
 ### Added

@@ -46,6 +46,16 @@ export async function setAutoLock(_prev: FormState, fd: FormData): Promise<FormS
   return { success: `Auto-lock set to ${minutes} minute${minutes === 1 ? "" : "s"}.` };
 }
 
+export async function setLateIncome(_prev: FormState, fd: FormData): Promise<FormState> {
+  const user = await requireUser();
+  const on = field(fd, "enabled") === "on";
+  const day = Number(field(fd, "day"));
+  if (on && (!Number.isInteger(day) || day < 1 || day > 31)) return { error: "Choose a day between 1 and 31." };
+  await prisma.user.update({ where: { id: user.id }, data: { lateIncomeDay: on ? day : null } });
+  revalidatePath("/", "layout");
+  return { success: on ? `Income on or after day ${day} will count toward the next month in reports.` : "Late income shift is off." };
+}
+
 export async function setAssetThreshold(_prev: FormState, fd: FormData): Promise<FormState> {
   const user = await requireUser();
   const cents = parseMoneyToCents(field(fd, "threshold"));

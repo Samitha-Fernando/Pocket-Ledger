@@ -181,6 +181,7 @@ export type AssetInput = {
   residualValue: number; // cents
   notes?: string | null;
   details?: string | null; // shown on the purchase transaction
+  importRowId?: string | null; // spreadsheet row it came from
 };
 
 function validateAsset(input: AssetInput, today: string) {
@@ -229,7 +230,7 @@ export async function createAsset(db: UserDb, input: AssetInput, today: string, 
     });
     await postEntry(
       tx,
-      { kind: "ASSET_PURCHASE", date: input.purchaseDate, assetId: asset.id, details: input.details ?? input.name },
+      { kind: "ASSET_PURCHASE", date: input.purchaseDate, assetId: asset.id, details: input.details ?? input.name, importRowId: input.importRowId },
       [
         { accountId: input.fundingAccountId, amount: BigInt(-input.cost) },
         { accountId: account.id, amount: BigInt(input.cost) },

@@ -8,7 +8,7 @@ Under the hood every transaction is **double-entry**: money always moves *from* 
 account *to* another, so balances always reconcile. You never have to think in
 debits and credits; you fill in a simple form and the app records both sides.
 
-> Status: **Phase 4 (credit cards & loans)** is complete. See [CHANGELOG.md](CHANGELOG.md) and the
+> Status: **Phase 5 Part A (Excel import)** is complete. Part B (History workbench) is next. See [CHANGELOG.md](CHANGELOG.md) and the
 > full plan in [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md).
 
 ---
@@ -136,6 +136,27 @@ Demo logins (all fake):
 - Set a **payment due day** to get reminders: "Due in the next 7 days", and
   "Payment missed" if a due date passes with nothing paid. Home shows a warning.
 - **Net worth** = what you own − what you owe.
+
+## Importing your Excel history
+
+**History → Import** (or Settings → Import), then upload your `.xlsx`:
+
+1. **Categories**: choose the account the sheet tracked (e.g. Bank account), the
+   balance before the first row (0 if the first row was your first money in), and
+   what each spreadsheet "Type / Category" becomes. Sensible guesses are filled in:
+   Savings rows become **transfers** (not expenses), "Asset Purchases" of Rs 50,000+
+   become **assets**, "Debt" rows wait for you to pick the card/loan (or an expense).
+   The sheet's "late income shift" setting can be copied to your settings.
+2. **Review rows**: filter to "Needs a decision", search, change rows one by one or
+   select many and change them together; skip rows you don't want.
+3. **Post**: shows the spreadsheet total vs the posted total per category (✓ when
+   they match). Every transaction keeps its original spreadsheet row, shown on its
+   page in History.
+
+- The file is read once and **not kept**; nothing is posted until you press Post.
+- **Upload a newer version later** and only the new rows are added.
+- **Undo** removes everything an import created (including assets it bought).
+- Uses SheetJS 0.20.3 from its official site (the npm copy is outdated).
 
 ## How sign-in and privacy work
 
