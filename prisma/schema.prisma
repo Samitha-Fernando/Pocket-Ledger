@@ -47,6 +47,7 @@ model User {
   entryLines     EntryLine[]
   fixedAssets    FixedAsset[]
   loans          Loan[]
+  debts          Debt[]
 }
 
 // ---- Ledger (double-entry) ---------------------------------------------------
@@ -67,7 +68,7 @@ model Account {
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
   type      AccountType
-  subtype   String? // ASSET: CASH | BANK | SAVINGS | OTHER | FIXED (a fixed asset) | LENT (a loan/investment)
+  subtype   String? // ASSET: CASH | BANK | SAVINGS | OTHER | FIXED | LENT · LIABILITY: CARD | LOAN
   isSystem  Boolean     @default(false) // created and managed by the app (e.g. Opening Balances)
   systemKey String? // which app-managed account: OPENING | DEPRECIATION | ASSET_GAIN | ASSET_LOSS | BAD_DEBTS
   archived  Boolean     @default(false)
@@ -78,6 +79,7 @@ model Account {
   lines      EntryLine[]
   fixedAsset FixedAsset?
   loan       Loan?
+  debt       Debt?
 
   @@index([userId, type])
 }
@@ -94,6 +96,37 @@ enum EntryKind {
   LEND // money lent / invested (optionally with interest kept up front)
   LOAN_RETURN // money received back: principal + any interest
   LOAN_WRITE_OFF // money that isn't coming back
+  BORROW // money borrowed (optionally with fees deducted)
+  DEBT_PAYMENT // payment on a card / loan: principal + any interest
+  DEBT_CHARGE // interest or fees added to a card / loan
+}
+
+// Credit cards & loans you owe. "Owed" is the balance of its own liability account.
+model Debt {
+  id              String  @id @default(cuid())
+  userId          String
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId       String  @unique
+  account         Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  name            String // e.g. "Sampath Visa", "Car loan"
+  lender          String?
+  kind            String // CREDIT_CARD | PAWNING | BANK_LOAN | LEASE | OTHER
+  startDate       String // "YYYY-MM-DD"
+  endDate         String?
+  rateBasisPoints Int     @default(0) // 28% = 2800
+  ratePeriod      String  @default("YEAR") // MONTH | YEAR
+  creditLimit     BigInt? // cards (cents)
+  dueDay          Int? // day of the month a payment is due (1–31)
+  monthlyPayment  BigInt? // loan instalment (cents)
+  status          String  @default("ACTIVE") // ACTIVE | PAID_OFF
+  closedDate      String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  entries Entry[]
+
+  @@index([userId, status])
 }
 
 // Lending & investments register: one row per loan / cheque exchange / deposit.
@@ -163,6 +196,9 @@ model Entry {
   // Link to a loan/investment: lending, money back, interest, write-off.
   loanId    String?
   loan      Loan?       @relation(fields: [loanId], references: [id], onDelete: SetNull)
+  // Link to a card / loan you owe: starting balance, borrowing, payment, charge.
+  debtId    String?
+  debt      Debt?       @relation(fields: [debtId], references: [id], onDelete: SetNull)
   depMonth  String? // "YYYY-MM" for depreciation entries (stops double-posting)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

@@ -61,7 +61,7 @@ function AccountSelect({
         </option>
         {visible(options, value).map((o) => (
           <option key={o.id} value={o.id}>
-            {o.name} · {formatMoney(o.balance, currency)}
+            {o.name} · {o.isCard ? `card, owes ${formatMoney(o.balance, currency)}` : formatMoney(o.balance, currency)}
           </option>
         ))}
       </select>
@@ -122,6 +122,7 @@ export function EntryForm({
   const [expenseCat, setExpenseCat] = useState(entry?.kind === "EXPENSE" ? entry.categoryId ?? "" : "");
   const [incomeCat, setIncomeCat] = useState(entry?.kind === "INCOME" ? entry.categoryId ?? "" : "");
   const first = data.assets.find((a) => !a.archived)?.id ?? "";
+  const payOptions = data.payFrom;
   const [payFrom, setPayFrom] = useState(
     (entry?.kind === "EXPENSE" ? entry.accountId : data.defaults.expenseAccountId) ?? first,
   );
@@ -152,9 +153,10 @@ export function EntryForm({
   const isAsset = kind === "EXPENSE" && (recordAsAsset ?? overThreshold);
   const submitKind = isAsset ? "ASSET_PURCHASE" : kind;
   const payingId = kind === "EXPENSE" ? payFrom : kind === "TRANSFER" ? fromId : "";
-  const paying = data.assets.find((a) => a.id === payingId);
+  const paying = payOptions.find((a) => a.id === payingId);
   const alreadyCounted = entry && (entry.accountId === payingId || entry.fromId === payingId) ? entry.amount : 0;
-  const available = paying ? paying.balance + alreadyCounted : 0;
+  // Cash/bank: what's in it. Card: credit still available (if a limit is set).
+  const available = !paying ? 0 : paying.isCard ? (paying.available ?? Infinity) + alreadyCounted : paying.balance + alreadyCounted;
   const overdraw = paying && cents > 0 && cents > available;
 
   return (
@@ -207,9 +209,11 @@ export function EntryForm({
         {overdraw && (
           <p className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
             <TriangleAlertIcon className="size-3.5" />
-            {available > 0
-              ? `This is more than the ${formatMoney(available, currency)} in ${paying.name}.`
-              : `${paying.name} is already at ${formatMoney(available, currency)}.`}{" "}
+            {paying.isCard
+              ? `This is more than the ${formatMoney(Math.max(0, available), currency)} credit left on ${paying.name}.`
+              : available > 0
+                ? `This is more than the ${formatMoney(available, currency)} in ${paying.name}.`
+                : `${paying.name} is already at ${formatMoney(available, currency)}.`}{" "}
             You can still save it.
           </p>
         )}
@@ -242,7 +246,7 @@ export function EntryForm({
       {kind === "EXPENSE" && (
         <>
           {!isAsset && <CategoryPicker options={data.expenseCategories} value={expenseCat} onChange={setExpenseCat} />}
-          <AccountSelect label="Paid from" name="accountId" options={data.assets} value={payFrom} onChange={setPayFrom} currency={currency} />
+          <AccountSelect label="Paid from" name="accountId" options={payOptions} value={payFrom} onChange={setPayFrom} currency={currency} />
           {!isAsset && data.fixedAssets.length > 0 && (
             <div className="grid gap-1.5">
               <Label htmlFor="linkedAssetId">For an asset? (optional)</Label>

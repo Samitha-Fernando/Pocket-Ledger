@@ -34,6 +34,7 @@ async function main() {
   const { saveEntry } = await import("../src/lib/ledger/engine");
   const { createAsset } = await import("../src/lib/ledger/assets");
   const { createLoan, receiveBack } = await import("../src/lib/ledger/loans");
+  const { createDebt, makePayment, monthlyInterest } = await import("../src/lib/ledger/debts");
   const { shiftMonth, todayIso } = await import("../src/lib/format");
 
   for (const [index, u] of DEMO_USERS.entries()) {
@@ -228,7 +229,96 @@ async function main() {
       );
       loanCount = 1;
     }
-    console.log(`  ${u.name}: ${count} demo transactions, ${assets.length} asset(s), ${loanCount} loan(s)`);
+    // ---- Fake credit card & loans you owe ----
+    let debtCount = 0;
+    if (index === 0) {
+      const visa = await createDebt(
+        db,
+        {
+          name: "Sampath Visa",
+          lender: "Sampath Bank",
+          kind: "CREDIT_CARD",
+          startDate: `${start}-01`,
+          rateBasisPoints: 2800,
+          ratePeriod: "YEAR",
+          creditLimit: rs(300_000),
+          dueDay: 20,
+          notes: "Demo card ending 4821",
+          start: { type: "NONE" },
+        },
+        today,
+      );
+      const visaAccount = (await db.debt.findUniqueOrThrow({ where: { id: visa } })).accountId;
+      for (let m = 0; m <= 3; m++) {
+        let spent = 0;
+        for (const [d, cat, amount, details] of [
+          [8, "Groceries", 8_400, "Supermarket (card)"],
+          [16, "Fun & Vacation", 6_900, "Dinner out (card)"],
+          [22, "Clothing", 5_500, "Shoes (card)"],
+        ] as const) {
+          const date = day(m, d);
+          if (date > today) continue;
+          await saveEntry(db, { kind: "EXPENSE", date, amount: rs(amount), categoryId: acc[cat], accountId: visaAccount, details });
+          spent += amount;
+          count++;
+        }
+        // Pay last month's card bill in full on the 18th.
+        const payDate = day(m + 1, 18);
+        if (spent > 0 && payDate <= today) {
+          await makePayment(db, visa, { date: payDate, principal: rs(spent), interest: 0, fromAccountId: acc["Bank account"], details: "Card bill" }, today);
+          count++;
+        }
+      }
+      await createDebt(
+        db,
+        {
+          name: "Gold chain pawn",
+          lender: "People's Bank",
+          kind: "PAWNING",
+          startDate: day(1, 10),
+          rateBasisPoints: 1800,
+          ratePeriod: "YEAR",
+          notes: "Demo pawn ticket 7781",
+          start: { type: "BORROW", amount: rs(120_000), fees: 0, intoAccountId: acc["Bank account"] },
+        },
+        today,
+      );
+      debtCount = 2;
+    } else {
+      const bankLoan = await createDebt(
+        db,
+        {
+          name: "Personal loan",
+          lender: "Commercial Bank",
+          kind: "BANK_LOAN",
+          startDate: `${start}-01`,
+          rateBasisPoints: 1400,
+          ratePeriod: "YEAR",
+          dueDay: 5,
+          monthlyPayment: rs(14_000),
+          notes: "Demo: 24 instalments",
+          start: { type: "ALREADY_OWE", amount: rs(280_000) },
+        },
+        today,
+      );
+      let owed = BigInt(rs(280_000));
+      for (let m = 1; m <= 3; m++) {
+        const date = day(m, 5);
+        if (date > today) continue;
+        const interest = monthlyInterest(owed, 1400, "YEAR");
+        const principal = BigInt(rs(14_000)) - interest;
+        await makePayment(
+          db,
+          bankLoan,
+          { date, principal: Number(principal), interest: Number(interest), fromAccountId: acc["Bank account"], interestAccountId: acc["Interest Paid"], details: "Monthly instalment" },
+          today,
+        );
+        owed -= principal;
+        count++;
+      }
+      debtCount = 1;
+    }
+    console.log(`  ${u.name}: ${count} demo transactions, ${assets.length} asset(s), ${loanCount} loan(s), ${debtCount} debt(s)`);
   }
 
   await prisma.$disconnect();

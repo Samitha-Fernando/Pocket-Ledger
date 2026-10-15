@@ -5,6 +5,7 @@ import { getLedger } from "@/lib/auth/session";
 import { formatIsoDate, formatMonth, formatMoney, todayIso } from "@/lib/format";
 import { FIXED_SUBTYPE, LENT_SUBTYPE, getAccountsWithBalances, isMoneyAccount } from "@/lib/ledger/accounts";
 import { getLoans } from "@/lib/ledger/loans";
+import { getDebts } from "@/lib/ledger/debts";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Home" };
@@ -57,6 +58,10 @@ export default async function HomePage() {
   const fixedAssets = total((a) => a.subtype === FIXED_SUBTYPE);
   const lentOut = total((a) => a.subtype === LENT_SUBTYPE);
   const overdueLoans = (await getLoans(db, today)).filter((l) => l.overdue).length;
+  const debts = (await getDebts(db, today)).filter((d) => d.debt.status === "ACTIVE");
+  const owed = total((a) => a.type === "LIABILITY");
+  const missed = debts.filter((d) => d.overdue).length;
+  const dueSoon = debts.filter((d) => d.dueSoon).length;
   const netWorth = total((a) => a.type === "ASSET") - total((a) => a.type === "LIABILITY");
   const income = total((a) => a.type === "INCOME", monthly);
   // Includes depreciation: a real (non-cash) expense.
@@ -86,7 +91,13 @@ export default async function HomePage() {
           warn={overdueLoans > 0}
         />
         <Tile label="Fixed assets" value={money(fixedAssets)} note="worth today" href="/assets" />
-        <Tile label="Debts" value={money(BigInt(0))} note="Phase 4" muted />
+        <Tile
+          label="Debts"
+          value={money(owed)}
+          note={missed ? `⚠ ${missed} payment missed` : dueSoon ? `⚠ ${dueSoon} payment due soon` : "cards & loans"}
+          href="/debts"
+          warn={missed + dueSoon > 0}
+        />
       </div>
 
       <ComingSoon icon={ChartLineIcon} phase="Phase 6">

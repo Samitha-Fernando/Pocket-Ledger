@@ -1,7 +1,7 @@
 import type { FixedAsset } from "@/generated/prisma/client";
 import type { UserDb } from "@/lib/db/scoped";
 import { isIsoDate } from "@/lib/format";
-import { FIXED_SUBTYPE, isMoneyAccount, systemAccount } from "./accounts";
+import { FIXED_SUBTYPE, canPayFrom, isMoneyAccount, systemAccount } from "./accounts";
 import { LedgerError, type Line, type Tx, postEntry } from "./engine";
 
 /**
@@ -161,9 +161,9 @@ async function loadAsset(tx: Tx, assetId: string) {
   return asset;
 }
 
-async function moneyAccount(tx: Tx, id: string, label: string) {
+async function moneyAccount(tx: Tx, id: string, label: string, allowCard = false) {
   const account = await tx.account.findUnique({ where: { id } });
-  if (!account || !isMoneyAccount(account) || account.isSystem || account.archived) {
+  if (!account || !(allowCard ? canPayFrom(account) : isMoneyAccount(account)) || account.isSystem || account.archived) {
     throw new LedgerError(`Choose a valid ${label}.`);
   }
   return account;
@@ -210,7 +210,7 @@ export async function createAsset(db: UserDb, input: AssetInput, today: string, 
       if (!old || old.kind !== "EXPENSE") throw new LedgerError("That expense no longer exists.");
       await tx.entry.delete({ where: { id: old.id } });
     }
-    await moneyAccount(tx, input.fundingAccountId, "account to pay from");
+    await moneyAccount(tx, input.fundingAccountId, "account to pay from", true);
 
     const account = await tx.account.create({
       data: { name: input.name.trim(), type: "ASSET", subtype: FIXED_SUBTYPE } as never,
@@ -273,7 +273,7 @@ export async function updateAsset(db: UserDb, assetId: string, input: AssetInput
     await tx.account.update({ where: { id: asset.accountId }, data: { name: input.name.trim() } });
 
     if (purchase && (financialChange || fundingChange)) {
-      await moneyAccount(tx, input.fundingAccountId, "account to pay from");
+      await moneyAccount(tx, input.fundingAccountId, "account to pay from", true);
       await tx.entry.delete({ where: { id: purchase.id } });
       await postEntry(
         tx,

@@ -30,12 +30,13 @@ export default async function AccountPage({ params }: PageProps<"/accounts/[id]"
   const { id } = await params;
   const account = await db.account.findUnique({
     where: { id },
-    include: { fixedAsset: { select: { id: true } }, loan: { select: { id: true } } },
+    include: { fixedAsset: { select: { id: true } }, loan: { select: { id: true } }, debt: { select: { id: true } } },
   });
   if (!account) notFound();
   // Fixed assets and loans are shown on their own register pages.
   if (account.fixedAsset) redirect(`/assets/${account.fixedAsset.id}`);
   if (account.loan) redirect(`/loans/${account.loan.id}`);
+  if (account.debt) redirect(`/debts/${account.debt.id}`);
 
   const lines = await db.entryLine.findMany({
     where: { accountId: id },

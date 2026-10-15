@@ -1,5 +1,5 @@
 import type { Account, Entry, EntryKind, EntryLine } from "@/generated/prisma/client";
-import { isMoneyAccount } from "./accounts";
+import { canPayFrom, isMoneyAccount } from "./accounts";
 
 export type EntryWithLines = Entry & {
   lines: (EntryLine & { account: Account })[];
@@ -27,12 +27,17 @@ export type EntryView = {
   loanId?: string | null; // linked loan / investment
   loanName?: string;
   interestAmount?: number; // interest part of a lend (kept up front) or money-back entry
+  debtId?: string | null; // linked card / loan you owe
+  debtName?: string;
+  chargeAmount?: number; // interest / fees (an expense) inside a borrowing, payment or charge
+  paidByCard?: boolean; // an expense or asset bought on a credit card
 };
 
 /** Reads the lines of an entry back into "category / account / amount" terms. */
 export function describeEntry(entry: EntryWithLines): EntryView {
   const lent = entry.lines.find((l) => l.account.subtype === "LENT");
   const loanName = entry.loan?.counterparty ?? lent?.account.name;
+  const owed = entry.lines.find((l) => l.account.type === "LIABILITY");
   const base = {
     id: entry.id,
     kind: entry.kind,
@@ -41,12 +46,17 @@ export function describeEntry(entry: EntryWithLines): EntryView {
     assetId: entry.assetId,
     loanId: entry.loanId,
     loanName,
+    debtId: entry.debtId,
+    debtName: owed?.account.name,
   };
+  const chargePart = Number(entry.lines.filter((l) => l.account.type === "EXPENSE").reduce((s, l) => s + l.amount, BigInt(0)));
   const incomePart = Number(-entry.lines.filter((l) => l.account.type === "INCOME").reduce((s, l) => s + l.amount, BigInt(0)));
   const byType = (type: Account["type"]) => entry.lines.find((l) => l.account.type === type);
   const fixed = entry.lines.find((l) => l.account.subtype === "FIXED");
   const money = (sign: 1 | -1) =>
     entry.lines.find((l) => isMoneyAccount(l.account) && (sign > 0 ? l.amount > BigInt(0) : l.amount < BigInt(0)));
+  // What paid for an expense or asset: cash/bank, or a credit card.
+  const payer = entry.lines.find((l) => canPayFrom(l.account) && l.amount < BigInt(0));
   const assetName = fixed?.account.name ?? entry.asset?.name;
 
   switch (entry.kind) {
@@ -64,7 +74,7 @@ export function describeEntry(entry: EntryWithLines): EntryView {
     }
     case "EXPENSE": {
       const cat = byType("EXPENSE");
-      const acc = money(-1);
+      const acc = payer;
       return {
         ...base,
         assetName,
@@ -73,6 +83,7 @@ export function describeEntry(entry: EntryWithLines): EntryView {
         categoryName: cat?.account.name,
         accountId: acc?.accountId,
         accountName: acc?.account.name,
+        paidByCard: acc?.account.type === "LIABILITY",
       };
     }
     case "TRANSFER": {
@@ -88,12 +99,21 @@ export function describeEntry(entry: EntryWithLines): EntryView {
       };
     }
     case "OPENING_BALANCE": {
-      const acc = byType("ASSET");
-      return { ...base, amount: Number(acc?.amount ?? 0), accountId: acc?.accountId, accountName: acc?.account.name };
+      // A starting balance on a money account, or a balance already owed on a card / loan.
+      const acc = byType("ASSET") ?? owed;
+      const amount = acc?.account.type === "LIABILITY" ? -(acc?.amount ?? BigInt(0)) : (acc?.amount ?? BigInt(0));
+      return { ...base, amount: Number(amount), accountId: acc?.accountId, accountName: acc?.account.name };
     }
     case "ASSET_PURCHASE": {
-      const from = money(-1);
-      return { ...base, amount: Number(fixed?.amount ?? 0), assetName, accountId: from?.accountId, accountName: from?.account.name };
+      const from = payer;
+      return {
+        ...base,
+        amount: Number(fixed?.amount ?? 0),
+        assetName,
+        accountId: from?.accountId,
+        accountName: from?.account.name,
+        paidByCard: from?.account.type === "LIABILITY",
+      };
     }
     case "DEPRECIATION":
       // Shown as the value lost (positive).
@@ -115,6 +135,16 @@ export function describeEntry(entry: EntryWithLines): EntryView {
     }
     case "LOAN_WRITE_OFF":
       return { ...base, amount: Number(-(lent?.amount ?? BigInt(0))) };
+    case "BORROW": {
+      const into = money(1);
+      return { ...base, amount: Number(-(owed?.amount ?? BigInt(0))), chargeAmount: chargePart, accountId: into?.accountId, accountName: into?.account.name };
+    }
+    case "DEBT_PAYMENT": {
+      const from = money(-1);
+      return { ...base, amount: Number(-(from?.amount ?? BigInt(0))), chargeAmount: chargePart, accountId: from?.accountId, accountName: from?.account.name };
+    }
+    case "DEBT_CHARGE":
+      return { ...base, amount: chargePart, chargeAmount: chargePart };
   }
 }
 
@@ -130,4 +160,7 @@ export const KIND_LABELS: Record<EntryKind, string> = {
   LEND: "Money lent",
   LOAN_RETURN: "Money received back",
   LOAN_WRITE_OFF: "Written off",
+  BORROW: "Money borrowed",
+  DEBT_PAYMENT: "Payment on card / loan",
+  DEBT_CHARGE: "Interest / fees charged",
 };

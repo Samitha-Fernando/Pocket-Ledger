@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/coming-soon";
 import { getLedger } from "@/lib/auth/session";
 import { formatMoney, todayIso } from "@/lib/format";
 import { getLoans } from "@/lib/ledger/loans";
+import { getDebts } from "@/lib/ledger/debts";
 import { getRawBalances } from "@/lib/ledger/accounts";
 import { cn } from "@/lib/utils";
 
@@ -11,11 +12,16 @@ export const metadata = { title: "Registers" };
 
 export default async function RegistersPage() {
   const { user, db } = await getLedger();
-  const [assets, balances, loans] = await Promise.all([
+  const today = todayIso(user.timezone);
+  const [assets, balances, loans, debts] = await Promise.all([
     db.fixedAsset.findMany({ where: { status: "ACTIVE" }, select: { accountId: true } }),
     getRawBalances(db),
-    getLoans(db, todayIso(user.timezone)),
+    getLoans(db, today),
+    getDebts(db, today),
   ]);
+  const activeDebts = debts.filter((d) => d.debt.status === "ACTIVE");
+  const owed = activeDebts.reduce((s, d) => s + d.owed, BigInt(0));
+  const attention = activeDebts.filter((d) => d.overdue || d.dueSoon).length;
   const active = loans.filter((l) => l.loan.status === "ACTIVE");
   const out = active.reduce((s, l) => s + l.out, BigInt(0));
   const overdue = active.filter((l) => l.overdue).length;
@@ -36,7 +42,13 @@ export default async function RegistersPage() {
       text: `${active.length} active · ${formatMoney(out, user.currency)} out${overdue ? ` · ${overdue} overdue` : ""}`,
       ready: true,
     },
-    { href: "", icon: CreditCardIcon, title: "Credit cards & loans", text: "Coming in Phase 4", ready: false },
+    {
+      href: "/debts",
+      icon: CreditCardIcon,
+      title: "Credit cards & loans",
+      text: `${activeDebts.length} active · ${formatMoney(owed, user.currency)} owed${attention ? ` · ${attention} payment${attention === 1 ? "" : "s"} due` : ""}`,
+      ready: true,
+    },
   ];
 
   return (

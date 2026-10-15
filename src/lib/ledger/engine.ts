@@ -1,7 +1,7 @@
 import type { Account, EntryKind } from "@/generated/prisma/client";
 import type { UserDb } from "@/lib/db/scoped";
 import { isIsoDate } from "@/lib/format";
-import { isMoneyAccount } from "./accounts";
+import { canPayFrom, isMoneyAccount } from "./accounts";
 
 /**
  * The double-entry engine. Every transaction becomes a list of lines whose
@@ -93,6 +93,7 @@ export async function postEntry(
     assetId?: string | null;
     depMonth?: string | null;
     loanId?: string | null;
+    debtId?: string | null;
   },
   lines: Line[],
 ) {
@@ -105,6 +106,7 @@ export async function postEntry(
       assetId: header.assetId ?? null,
       depMonth: header.depMonth ?? null,
       loanId: header.loanId ?? null,
+      debtId: header.debtId ?? null,
     } as never,
   });
   await tx.entryLine.createMany({ data: lines.map((l) => ({ ...l, entryId: entry.id })) as never });
@@ -137,7 +139,7 @@ function validate(input: EntryInput, accounts: Map<string, Account>, keepArchive
       break;
     case "EXPENSE":
       need(input.categoryId, ofType("EXPENSE"), "expense category");
-      need(input.accountId, money, "account to pay from");
+      need(input.accountId, canPayFrom, "account to pay from");
       break;
     case "TRANSFER":
       need(input.fromId, money, "account to move money from");
@@ -179,8 +181,10 @@ export async function saveEntry(db: UserDb, input: EntryInput, entryId?: string)
     loanId ? db.loan.findUnique({ where: { id: loanId } }) : Promise.resolve(null),
   ]);
   if (entryId && !existing) throw new LedgerError("That transaction no longer exists.");
-  if (existing && !FORM_KINDS.includes(existing.kind)) {
-    throw new LedgerError("This transaction is managed from its asset's page.");
+  if (existing && (!FORM_KINDS.includes(existing.kind) || existing.debtId)) {
+    throw new LedgerError(
+      existing.debtId ? "This transaction is managed from its card or loan's page." : "This transaction is managed from its asset's page.",
+    );
   }
   if (assetId && !asset) throw new LedgerError("Choose a valid asset to link.");
   if (loanId && !loan) throw new LedgerError("Choose a valid loan or investment to link.");
@@ -211,6 +215,10 @@ export async function saveEntry(db: UserDb, input: EntryInput, entryId?: string)
 export async function deleteEntry(db: UserDb, entryId: string) {
   const entry = await db.entry.findUnique({ where: { id: entryId } });
   if (!entry) throw new LedgerError("That transaction no longer exists.");
-  if (!FORM_KINDS.includes(entry.kind)) throw new LedgerError("This transaction is managed from its asset's page.");
+  if (!FORM_KINDS.includes(entry.kind) || entry.debtId) {
+    throw new LedgerError(
+      entry.debtId ? "This transaction is managed from its card or loan's page." : "This transaction is managed from its asset's page.",
+    );
+  }
   await db.entry.delete({ where: { id: entryId } });
 }

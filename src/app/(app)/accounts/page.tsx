@@ -66,6 +66,8 @@ export default async function AccountsPage() {
   const fixed = active.filter((a) => a.subtype === FIXED_SUBTYPE && a.balance !== BigInt(0));
   // Money lent out that hasn't come back yet.
   const lent = active.filter((a) => a.subtype === LENT_SUBTYPE && a.balance !== BigInt(0));
+  // Cards and loans you owe (cards are listed even at zero).
+  const owe = active.filter((a) => a.type === "LIABILITY" && (a.subtype === "CARD" || a.balance !== BigInt(0)));
   const income = thisMonth.filter((a) => a.type === "INCOME" && !a.archived);
   const expenses = thisMonth.filter((a) => a.type === "EXPENSE" && !a.archived);
   const archived = allTime.filter((a) => a.archived && a.subtype !== FIXED_SUBTYPE && a.subtype !== LENT_SUBTYPE);
@@ -87,6 +89,7 @@ export default async function AccountsPage() {
           currency={user.currency}
           subtitle={(a) => ASSET_SUBTYPES[a.subtype as keyof typeof ASSET_SUBTYPES]}
         />
+        {owe.length > 0 && <Group title="Money you owe" total={sum(owe)} accounts={owe} currency={user.currency} />}
         {lent.length > 0 && <Group title="Lent out & invested" total={sum(lent)} accounts={lent} currency={user.currency} />}
         {fixed.length > 0 && <Group title="Fixed assets (worth now)" total={sum(fixed)} accounts={fixed} currency={user.currency} />}
         <Group title={`Income · ${formatMonth(month)}`} total={sum(income)} accounts={income} currency={user.currency} />

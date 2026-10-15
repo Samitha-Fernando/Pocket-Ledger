@@ -6,6 +6,7 @@ export async function resetDb() {
   await prisma.entry.deleteMany();
   await prisma.fixedAsset.deleteMany();
   await prisma.loan.deleteMany();
+  await prisma.debt.deleteMany();
   await prisma.account.deleteMany();
   await prisma.auditLog.deleteMany();
   await prisma.user.deleteMany();

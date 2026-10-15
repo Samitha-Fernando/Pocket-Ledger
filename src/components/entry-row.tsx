@@ -6,6 +6,9 @@ import {
   FlagIcon,
   HandCoinsIcon,
   CircleSlashIcon,
+  CreditCardIcon,
+  LandmarkIcon,
+  PercentIcon,
   PackageIcon,
   SendIcon,
   TrendingDownIcon,
@@ -28,6 +31,9 @@ const ICONS: Record<EntryKind, typeof FlagIcon> = {
   LEND: SendIcon,
   LOAN_RETURN: HandCoinsIcon,
   LOAN_WRITE_OFF: CircleSlashIcon,
+  BORROW: LandmarkIcon,
+  DEBT_PAYMENT: CreditCardIcon,
+  DEBT_CHARGE: PercentIcon,
 };
 
 function titleAndSubtitle(e: EntryView): [string | undefined, string | undefined] {
@@ -35,7 +41,7 @@ function titleAndSubtitle(e: EntryView): [string | undefined, string | undefined
     case "TRANSFER":
       return [`${e.fromName} → ${e.toName}`, "Transfer"];
     case "OPENING_BALANCE":
-      return ["Opening balance", e.accountName];
+      return [e.debtId ? "Balance already owed" : "Opening balance", e.accountName];
     case "INCOME":
       return [e.categoryName, `into ${e.accountName}${e.loanName ? ` · from ${e.loanName}` : ""}`];
     case "EXPENSE":
@@ -54,12 +60,18 @@ function titleAndSubtitle(e: EntryView): [string | undefined, string | undefined
       return [`Received from ${e.loanName}`, `into ${e.accountName}${e.interestAmount ? " · incl. interest" : ""}`];
     case "LOAN_WRITE_OFF":
       return [`Written off: ${e.loanName}`, "Bad debt"];
+    case "BORROW":
+      return [`Borrowed: ${e.debtName}`, `into ${e.accountName}${e.chargeAmount ? " · fees deducted" : ""}`];
+    case "DEBT_PAYMENT":
+      return [`Paid ${e.debtName}`, `from ${e.accountName}${e.chargeAmount ? " · incl. interest" : ""}`];
+    case "DEBT_CHARGE":
+      return [`Interest / fees: ${e.debtName}`, "Added to what you owe"];
   }
 }
 
 /** What the row shows as the amount (sign included), when not overridden. */
 function shownAmount(e: EntryView) {
-  if (e.kind === "EXPENSE" || e.kind === "DEPRECIATION" || e.kind === "LOAN_WRITE_OFF") return -e.amount;
+  if (["EXPENSE", "DEPRECIATION", "LOAN_WRITE_OFF", "DEBT_PAYMENT", "DEBT_CHARGE"].includes(e.kind)) return -e.amount;
   return e.amount;
 }
 
@@ -79,7 +91,7 @@ export function EntryRow({
   const [title, subtitle] = titleAndSubtitle(entry);
   const shown = amountOverride ?? shownAmount(entry);
   const isIncome = entry.kind === "INCOME" && amountOverride === undefined;
-  const isSpend = entry.kind === "EXPENSE" || entry.kind === "DEPRECIATION" || entry.kind === "LOAN_WRITE_OFF";
+  const isSpend = ["EXPENSE", "DEPRECIATION", "LOAN_WRITE_OFF", "DEBT_CHARGE"].includes(entry.kind);
 
   return (
     <Link href={`/history/${entry.id}`} className="flex min-h-16 items-center gap-3 px-3 py-2.5 transition-colors hover:bg-muted/60">
@@ -90,6 +102,7 @@ export function EntryRow({
           isSpend && "bg-rose-500/10 text-rose-700 dark:text-rose-400",
           (entry.kind === "ASSET_PURCHASE" || entry.kind === "ASSET_SALE") && "bg-sky-500/10 text-sky-700 dark:text-sky-400",
           (entry.kind === "LEND" || entry.kind === "LOAN_RETURN") && "bg-violet-500/10 text-violet-700 dark:text-violet-400",
+          (entry.kind === "BORROW" || entry.kind === "DEBT_PAYMENT") && "bg-amber-500/10 text-amber-700 dark:text-amber-400",
         )}
       >
         <Icon className="size-4" />

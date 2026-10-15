@@ -26,9 +26,17 @@ export default async function HistoryPage({ searchParams }: PageProps<"/history"
   // Income includes interest earned on loans (kept up front or received with the money back).
   const income = entries.reduce((s, e) => s + (e.kind === "INCOME" ? e.amount : (e.interestAmount ?? 0)), 0);
   // Depreciation and written-off loans are real (non-cash) expenses, so they count too.
-  const expenses = entries
-    .filter((e) => e.kind === "EXPENSE" || e.kind === "DEPRECIATION" || e.kind === "LOAN_WRITE_OFF")
-    .reduce((s, e) => s + e.amount, 0);
+  // Interest and fees on cards / loans are expenses too (paying off principal isn't).
+  const expenses = entries.reduce(
+    (s, e) =>
+      s +
+      (e.kind === "EXPENSE" || e.kind === "DEPRECIATION" || e.kind === "LOAN_WRITE_OFF"
+        ? e.amount
+        : e.kind === "BORROW" || e.kind === "DEBT_PAYMENT" || e.kind === "DEBT_CHARGE"
+          ? (e.chargeAmount ?? 0)
+          : 0),
+    0,
+  );
 
   // Group by day, newest first.
   const days = new Map<string, typeof entries>();

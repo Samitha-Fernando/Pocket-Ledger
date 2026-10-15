@@ -8,7 +8,7 @@ Under the hood every transaction is **double-entry**: money always moves *from* 
 account *to* another, so balances always reconcile. You never have to think in
 debits and credits; you fill in a simple form and the app records both sides.
 
-> Status: **Phase 3 (lending & investments)** is complete. See [CHANGELOG.md](CHANGELOG.md) and the
+> Status: **Phase 4 (credit cards & loans)** is complete. See [CHANGELOG.md](CHANGELOG.md) and the
 > full plan in [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md).
 
 ---
@@ -117,6 +117,25 @@ Demo logins (all fake):
   overall return, **overdue** loans (in red) and those **due in the next 30 days**.
   Home shows a warning when something is overdue.
 - Rates can be per month (default for cheque exchange) or per year (fixed deposits).
+
+## Credit cards & loans you owe
+
+- **Registers → Credit cards & loans → Add** a credit card, pawning, bank/personal
+  loan, lease or other debt. If you already owe something on it, enter the balance;
+  for a new loan, record what you borrowed (and any **fees deducted**, which count
+  as an expense).
+- **Pay with your card**: credit cards appear under "Paid from" on the Expense form
+  and when buying an asset. The spending is counted as an expense, and what you owe
+  on the card goes up. A warning shows if it's more than the credit left.
+- **Make a payment** on the card or loan's page: enter what you paid. Paying off what
+  you owe is **not** an expense (the spending was already counted); only the
+  **interest** is. For loans the app suggests this month's interest (from the rate)
+  and you can change the split. Loans are marked **Paid off** at zero; cards stay open.
+- **Interest or fees charged** (e.g. from a card statement) are an expense and are
+  added to what you owe. **Borrow more** / **cash advance** adds to the debt.
+- Set a **payment due day** to get reminders: "Due in the next 7 days", and
+  "Payment missed" if a due date passes with nothing paid. Home shows a warning.
+- **Net worth** = what you own − what you owe.
 
 ## How sign-in and privacy work
 

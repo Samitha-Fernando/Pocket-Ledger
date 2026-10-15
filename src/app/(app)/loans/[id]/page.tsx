@@ -13,7 +13,7 @@ import { formatRate, getLoanDetails } from "@/lib/ledger/loans";
 import { cn } from "@/lib/utils";
 import { deleteLoanAction, deleteMovementAction } from "../actions";
 import { LendMoreForm, ReceiveBackForm, WriteOffForm } from "../forms";
-import { ConfirmButton } from "./confirm-button";
+import { ConfirmButton } from "@/components/confirm-button";
 
 export const metadata = { title: "Loan" };
 

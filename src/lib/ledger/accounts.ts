@@ -20,6 +20,10 @@ export const FIXED_SUBTYPE = "FIXED";
 /** Subtype of the ledger account behind each loan / investment. */
 export const LENT_SUBTYPE = "LENT";
 
+/** Subtypes of the liability account behind each card / loan you owe. */
+export const CARD_SUBTYPE = "CARD";
+export const LOAN_DEBT_SUBTYPE = "LOAN";
+
 type Seed = { name: string; type: AccountType; subtype?: AssetSubtype; systemKey?: SystemKey };
 
 const SYSTEM_ACCOUNTS: Seed[] = [
@@ -95,6 +99,16 @@ export async function systemAccount(db: Pick<UserDb, "account">, key: SystemKey)
 /** Cash, bank, savings or other "money" account (not a fixed asset or money lent out). */
 export function isMoneyAccount(a: { type: AccountType; subtype: string | null }) {
   return a.type === "ASSET" && a.subtype !== FIXED_SUBTYPE && a.subtype !== LENT_SUBTYPE;
+}
+
+/** A credit card you can pay for things with. */
+export function isCardAccount(a: { type: AccountType; subtype: string | null }) {
+  return a.type === "LIABILITY" && a.subtype === CARD_SUBTYPE;
+}
+
+/** Accounts you can pay for an expense or asset from: cash/bank/savings or a credit card. */
+export function canPayFrom(a: { type: AccountType; subtype: string | null }) {
+  return isMoneyAccount(a) || isCardAccount(a);
 }
 
 /**

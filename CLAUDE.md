@@ -17,7 +17,10 @@ Full product brief: `docs/PROJECT_BRIEF.md`. The owner is not a developer.
   `getLedger()` (also ensures system accounts + posts due depreciation).
 - Form entries go through `saveEntry` (`src/lib/ledger/engine.ts`); asset entries
   (purchase, depreciation, revaluation, sale) only through `src/lib/ledger/assets.ts`;
-  loan entries (lend, money back, write-off) only through `src/lib/ledger/loans.ts`.
+  loan entries (lend, money back, write-off) only through `src/lib/ledger/loans.ts`;
+  debt entries (owed-at-start, borrow, payment, charge) only through `src/lib/ledger/debts.ts`
+  (entries with `debtId` are blocked from saveEntry/deleteEntry). Credit cards (LIABILITY,
+  subtype CARD) can pay for expenses/assets: use `canPayFrom`.
   Account subtypes FIXED / LENT are not "money" accounts (`isMoneyAccount`).
   System accounts are found by `systemKey`, never by name.
 - Tests share `tests/helpers.ts#resetDb` — add new tables there (children first).

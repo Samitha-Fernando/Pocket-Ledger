@@ -18,7 +18,7 @@ export default async function EditAssetPage({ params }: PageProps<"/assets/[id]/
   const purchase = await db.entry.findFirst({ where: { assetId: id, kind: "ASSET_PURCHASE" }, include: { lines: true } });
   const fundingAccountId = purchase?.lines.find((l) => l.accountId !== asset.accountId)?.accountId ?? "";
   const data = await getFormData(db, user.assetThresholdCents);
-  const accounts = data.assets.filter((a) => !a.archived || a.id === fundingAccountId);
+  const accounts = data.payFrom.filter((a) => !a.archived || a.id === fundingAccountId);
 
   return (
     <div className="mx-auto max-w-xl">

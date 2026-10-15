@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeftIcon, HandCoinsIcon, PackageIcon } from "lucide-react";
+import { ChevronLeftIcon, CreditCardIcon, HandCoinsIcon, PackageIcon } from "lucide-react";
 import { PageHeader } from "@/components/coming-soon";
 import { EntryForm } from "@/components/entry-form";
 import { EntryRow } from "@/components/entry-row";
@@ -34,8 +34,10 @@ export default async function EditEntryPage({ params }: PageProps<"/history/[id]
   );
 
   // Asset and loan entries are managed on the asset's / loan's own page.
-  if (!FORM_KINDS.includes(raw.kind)) {
-    const owner = raw.loanId
+  if (!FORM_KINDS.includes(raw.kind) || raw.debtId) {
+    const owner = raw.debtId
+      ? { href: `/debts/${raw.debtId}`, label: entry.debtName ?? "card or loan", what: "cards & loans register", icon: CreditCardIcon }
+      : raw.loanId
       ? { href: `/loans/${raw.loanId}`, label: entry.loanName ?? "loan", what: "lending register", icon: HandCoinsIcon }
       : raw.assetId
         ? { href: `/assets/${raw.assetId}`, label: entry.assetName ?? "asset", what: "asset register", icon: PackageIcon }

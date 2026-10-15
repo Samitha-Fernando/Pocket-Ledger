@@ -2,6 +2,38 @@
 
 All notable changes, in plain English. Newest first.
 
+## Phase 4: Credit cards & loans (2026-10-15)
+
+### Added
+- **Credit cards & loans register** (Registers → Credit cards & loans): credit cards,
+  pawning, bank/personal loans, leases and other debts, with lender, rate, credit
+  limit (cards), monthly instalment and end date (loans), payment due day and notes.
+- Start with **nothing owed**, a **balance already owed** (via Opening Balances), or
+  **borrowing now** with optional **fees deducted** (counted as an expense).
+- **Credit cards in "Paid from"** on the Expense form and when buying an asset; the
+  expense counts normally and what you owe goes up. Warning when over the credit left.
+- **Make a payment**: split into what comes off the debt (not an expense) and
+  interest (an expense). Loans suggest this month's interest from the rate; the
+  monthly instalment is pre-filled. Loans are marked **Paid off** automatically.
+- **Interest or fees charged**, **borrow more / cash advance**, delete a single
+  movement, edit details, delete a card or loan (refused while purchases still use it).
+- **Reminders**: "Due in the next 7 days" and "Payment missed" sections; warnings on
+  each page and on Home.
+- Each page shows what you owe, limit and credit available (cards), borrowed and
+  instalment (loans), paid off so far, interest & fees paid, next payment, and every
+  purchase and payment.
+- Home **Debts** tile is real and **net worth subtracts what you owe**; Accounts has a
+  "Money you owe" group; History shows borrowing, payments and charges and counts
+  interest and fees in monthly expenses.
+- Demo data: a credit card with monthly purchases and payments, a pawning loan, and a
+  bank loan with monthly instalments split into principal and interest.
+- 19 new tests (96 total): card spending, card payments not being an expense, owed-at-
+  start balancing, charges, buying an asset on a card, fees deducted, payment split,
+  pawning paid off in one go, due-soon / missed rules (incl. short months), privacy.
+
+### Changed
+- Shared "Are you sure?" button moved to `src/components/confirm-button.tsx`.
+
 ## Phase 3: Lending & investments (2026-10-15)
 
 ### Added

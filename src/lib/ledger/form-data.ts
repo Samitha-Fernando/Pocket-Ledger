@@ -1,15 +1,23 @@
 import type { UserDb } from "@/lib/db/scoped";
-import { getAccountsWithBalances, isMoneyAccount } from "./accounts";
+import { getAccountsWithBalances, isCardAccount, isMoneyAccount } from "./accounts";
 import { LOAN_KINDS } from "./loan-kinds";
 
-export type Option = { id: string; name: string; archived: boolean; balance: number };
+export type Option = {
+  id: string;
+  name: string;
+  archived: boolean;
+  balance: number; // for a card: what you owe
+  isCard?: boolean;
+  available?: number | null; // card: credit still available (null = no limit set)
+};
 
 /** Everything the Add/Edit transaction form needs, as plain serialisable data. */
 export async function getFormData(db: UserDb, assetThresholdCents: number) {
-  const [accounts, fixedAssets, loans, lastIncome, lastExpense, lastTransfer] = await Promise.all([
+  const [accounts, fixedAssets, loans, debts, lastIncome, lastExpense, lastTransfer] = await Promise.all([
     getAccountsWithBalances(db),
     db.fixedAsset.findMany({ select: { id: true, name: true, status: true }, orderBy: { purchaseDate: "desc" } }),
     db.loan.findMany({ select: { id: true, counterparty: true, kind: true, status: true }, orderBy: { startDate: "desc" } }),
+    db.debt.findMany({ select: { accountId: true, creditLimit: true } }),
     lastLines(db, "INCOME"),
     lastLines(db, "EXPENSE"),
     lastLines(db, "TRANSFER"),
@@ -25,12 +33,22 @@ export async function getFormData(db: UserDb, assetThresholdCents: number) {
 
   // "Your money" accounts only: cash, bank, savings (not the bike or the phone).
   const assets = accounts.filter((a) => isMoneyAccount(a) && !a.isSystem).map(toOption);
-  const assetIds = new Set(assets.map((a) => a.id));
+  // Credit cards can also pay for expenses and assets.
+  const limits = new Map(debts.map((d) => [d.accountId, d.creditLimit]));
+  const cards = accounts
+    .filter((a) => isCardAccount(a))
+    .map((a): Option => {
+      const limit = limits.get(a.id);
+      return { ...toOption(a), isCard: true, available: limit ? Number(limit - a.balance) : null };
+    });
+  const payFrom = [...assets, ...cards];
+  const assetIds = new Set(payFrom.map((a) => a.id));
   const assetLine = (lines: { accountId: string; amount: bigint }[] | undefined, sign: 1 | -1) =>
     lines?.find((l) => assetIds.has(l.accountId) && (sign > 0 ? l.amount > BigInt(0) : l.amount < BigInt(0)))?.accountId;
 
   return {
     assets,
+    payFrom,
     incomeCategories: categories("INCOME"),
     expenseCategories: categories("EXPENSE"),
     // For linking a repair to the thing it was for.

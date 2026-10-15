@@ -50,6 +50,13 @@ const ACTION_LABELS: Record<string, string> = {
   loan_written_off: "Loan written off",
   loan_movement_deleted: "Loan money movement deleted",
   loan_deleted: "Loan deleted",
+  debt_created: "Card / loan added",
+  debt_updated: "Card / loan details edited",
+  debt_payment: "Payment on card / loan",
+  debt_borrowed: "Money borrowed",
+  debt_charge: "Interest / fees charged",
+  debt_movement_deleted: "Card / loan movement deleted",
+  debt_deleted: "Card / loan deleted",
 };
 
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
