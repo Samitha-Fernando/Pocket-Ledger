@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { prisma } from "@/lib/db/client";
 import { getUserDb } from "@/lib/auth/session";
-import { centsToInput, formatDate, formatDateTime } from "@/lib/format";
+import { centsToInput, formatDate, formatDateTime, formatMoney } from "@/lib/format";
+import type { Snapshot } from "@/lib/ledger/history";
 import { signOutAction, switchUserAction } from "../../(auth)/actions";
 import { removePin, revokeInvite } from "./actions";
 import { AssetThresholdForm, AutoLockForm, InviteForm, LateIncomeForm, PasswordForm, PinForm } from "./forms";
@@ -62,6 +63,10 @@ const ACTION_LABELS: Record<string, string> = {
   import_posted: "Import posted",
   import_undone: "Import undone",
   import_deleted: "Import deleted",
+  bulk_edit: "Bulk change in History",
+  rule_created: "Rule created",
+  rule_applied: "Rule applied to past transactions",
+  rule_deleted: "Rule deleted",
 };
 
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
@@ -89,6 +94,12 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
 
   // Activity comes through the user-scoped client: it can only ever return this user's rows.
   const activity = await db.auditLog.findMany({ orderBy: { createdAt: "desc" }, take: 10 });
+  // Transactions removed recently (their edit history is kept even after deletion).
+  const deleted = await db.entryChange.findMany({
+    where: { action: { in: ["DELETE", "UNDO", "BULK", "CONVERT"] }, after: null },
+    orderBy: { createdAt: "desc" },
+    take: 15,
+  });
   const invites =
     user.role === "ADMIN"
       ? await prisma.invite.findMany({
@@ -230,6 +241,28 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
                 </ul>
               )}
             </div>
+          </Section>
+        )}
+
+        {deleted.length > 0 && (
+          <Section title="Recently deleted transactions" description="Kept for your records. What each one was, and when it was removed.">
+            <ul className="divide-y text-sm">
+              {deleted.map((c) => {
+                const s = c.before ? (JSON.parse(c.before) as Snapshot) : null;
+                const amount = s?.lines.filter((l) => BigInt(l.amount) > BigInt(0)).reduce((t, l) => t + BigInt(l.amount), BigInt(0)) ?? BigInt(0);
+                return (
+                  <li key={c.id} className="flex justify-between gap-4 py-2">
+                    <span className="min-w-0">
+                      <span className="block truncate">
+                        {s ? `${s.date.split("-").reverse().join("/")} · ${s.details ?? s.kind.toLowerCase()} · ${formatMoney(amount, user.currency)}` : "Transaction"}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">{c.summary}</span>
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{formatDateTime(c.createdAt)}</span>
+                  </li>
+                );
+              })}
+            </ul>
           </Section>
         )}
 

@@ -4,6 +4,7 @@ import { ASSET_CLASSES } from "@/lib/ledger/asset-classes";
 import { createAsset } from "@/lib/ledger/assets";
 import { deleteDebtMovement, makePayment } from "@/lib/ledger/debts";
 import { LedgerError, saveEntry } from "@/lib/ledger/engine";
+import { recordChange, snapshotEntry } from "@/lib/ledger/history";
 import { type Mapping, defaultMapping, mappingKey, planRow } from "./mapping";
 import { type ParsedWorkbook, fingerprintAll } from "./parse";
 
@@ -236,6 +237,11 @@ export async function postBatch(db: UserDb, batchId: string, today: string) {
           );
           break;
       }
+      // Assets and card/loan payments are created by their registers; note them in the edit history too.
+      if (row.action === "ASSET" || row.action === "DEBT_PAYMENT") {
+        const entry = await db.entry.findUnique({ where: { importRowId: row.id } });
+        if (entry) await recordChange(db, entry.id, "IMPORT", "Imported from a spreadsheet", null, await snapshotEntry(db, entry.id));
+      }
       posted++;
     } catch (err) {
       if (!(err instanceof LedgerError)) throw err;
@@ -258,6 +264,7 @@ export async function undoBatch(db: UserDb, batchId: string) {
 
   const entries = await db.entry.findMany({ where: { importRow: { batchId } } });
   for (const e of entries) {
+    await recordChange(db, e.id, "UNDO", `Import of ${batch.fileName} undone`, await snapshotEntry(db, e.id), null);
     if (e.kind === "ASSET_PURCHASE" && e.assetId) {
       // An asset bought through the import goes completely (depreciation etc. too).
       const asset = await db.fixedAsset.findUnique({ where: { id: e.assetId } });

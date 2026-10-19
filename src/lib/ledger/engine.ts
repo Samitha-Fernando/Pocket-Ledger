@@ -2,6 +2,7 @@ import type { Account, EntryKind } from "@/generated/prisma/client";
 import type { UserDb } from "@/lib/db/scoped";
 import { isIsoDate } from "@/lib/format";
 import { canPayFrom, isMoneyAccount } from "./accounts";
+import { type ChangeAction, recordChange, snapshotEntry } from "./history";
 
 /**
  * The double-entry engine. Every transaction becomes a list of lines whose
@@ -171,7 +172,12 @@ function accountIds(input: EntryInput) {
  * `db` is the user-scoped client, so only the user's own accounts are visible:
  * an account id belonging to someone else is simply "not found".
  */
-export async function saveEntry(db: UserDb, input: EntryInput, entryId?: string, opts: { importRowId?: string } = {}) {
+export async function saveEntry(
+  db: UserDb,
+  input: EntryInput,
+  entryId?: string,
+  opts: { importRowId?: string; change?: { action: ChangeAction; summary: string } } = {},
+) {
   const ids = accountIds(input);
   const assetId = input.kind === "EXPENSE" ? input.assetId || null : null;
   const loanId = input.kind === "INCOME" ? input.loanId || null : null;
@@ -201,7 +207,13 @@ export async function saveEntry(db: UserDb, input: EntryInput, entryId?: string,
   const header = { kind: input.kind as EntryKind, date: input.date, details: input.details, assetId, loanId, importRowId: opts.importRowId };
 
   return db.$transaction(async (tx) => {
-    if (!existing) return postEntry(tx, header, lines);
+    if (!existing) {
+      const id = await postEntry(tx, header, lines);
+      const action = opts.change?.action ?? (opts.importRowId ? "IMPORT" : "CREATE");
+      await recordChange(tx, id, action, opts.change?.summary ?? (opts.importRowId ? "Imported from a spreadsheet" : "Added"), null, await snapshotEntry(tx, id));
+      return id;
+    }
+    const before = await snapshotEntry(tx, existing.id);
     // Editing keeps the same transaction (id, "added" time); only its lines are replaced.
     await tx.entry.update({
       where: { id: existing.id },
@@ -209,12 +221,13 @@ export async function saveEntry(db: UserDb, input: EntryInput, entryId?: string,
     });
     await tx.entryLine.deleteMany({ where: { entryId: existing.id } });
     await tx.entryLine.createMany({ data: lines.map((l) => ({ ...l, entryId: existing.id })) as never });
+    await recordChange(tx, existing.id, opts.change?.action ?? "UPDATE", opts.change?.summary ?? "Edited", before, await snapshotEntry(tx, existing.id));
     return existing.id;
   });
 }
 
 /** Deletes an entry made with the Add form. Asset entries are removed via the asset page. */
-export async function deleteEntry(db: UserDb, entryId: string) {
+export async function deleteEntry(db: UserDb, entryId: string, change?: { action: ChangeAction; summary: string }) {
   const entry = await db.entry.findUnique({ where: { id: entryId } });
   if (!entry) throw new LedgerError("That transaction no longer exists.");
   if (!FORM_KINDS.includes(entry.kind) || entry.debtId) {
@@ -222,5 +235,9 @@ export async function deleteEntry(db: UserDb, entryId: string) {
       entry.debtId ? "This transaction is managed from its card or loan's page." : "This transaction is managed from its asset's page.",
     );
   }
-  await db.entry.delete({ where: { id: entryId } });
+  await db.$transaction(async (tx) => {
+    const before = await snapshotEntry(tx, entryId);
+    await tx.entry.delete({ where: { id: entryId } });
+    await recordChange(tx, entryId, change?.action ?? "DELETE", change?.summary ?? "Deleted", before, null);
+  });
 }

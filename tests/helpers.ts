@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db/client";
 
 /** Empties the throw-away test database, children before parents. */
 export async function resetDb() {
+  await prisma.entryChange.deleteMany();
+  await prisma.rule.deleteMany();
   await prisma.entryLine.deleteMany();
   await prisma.entry.deleteMany();
   await prisma.importRow.deleteMany();

@@ -2,6 +2,31 @@
 
 All notable changes, in plain English. Newest first.
 
+## Phase 5 Part B: History workbench (2026-10-19)
+
+### Added
+- **History is now a workbench**: quick ranges (this month / last month / this year /
+  all time) and custom dates; search in details; filters for type, account, category,
+  amount range, import, and "linked to an asset / loan"; sort by date or amount; group
+  by day, month or category; live totals; filters kept in the page address. Opens on
+  this month, like before.
+- **Bulk changes** on ticked transactions (or "select all"): change category or account,
+  link/unlink an asset or loan, convert expenses to assets, transfers or card/loan
+  payments, delete (with confirmation). Register movements can't be ticked.
+- **Rules** (History → Rules): "if details contain … then set category / account, link
+  asset / loan". Preview of the past transactions a rule would change, one-click apply,
+  pause/resume, delete. **Suggested** on the Add form with an Apply button.
+- **Edit history** for every transaction (added, edited, deleted, bulk change, rule,
+  import, undo, convert) with before → after details on its page; **Recently deleted**
+  list in Settings.
+- Demo: two example rules for Nimal.
+- 13 new tests (124 total): filters, every bulk action, register movements protected,
+  rules preview/apply/validation, edit history incl. after deletion, privacy.
+
+### Changed
+- Editing and deleting a transaction now also writes its edit history.
+- Date filters use real month ends (30/09, 28/02); old History links still work.
+
 ## Phase 5 Part A: Excel import (2026-10-15)
 
 ### Added

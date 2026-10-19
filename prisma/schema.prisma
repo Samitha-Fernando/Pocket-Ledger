@@ -52,6 +52,8 @@ model User {
   debts          Debt[]
   importBatches  ImportBatch[]
   importRows     ImportRow[]
+  entryChanges   EntryChange[]
+  rules          Rule[]
 }
 
 // ---- Ledger (double-entry) ---------------------------------------------------
@@ -345,4 +347,40 @@ model ImportRow {
 
   @@index([batchId, rowNumber])
   @@index([userId, fingerprint])
+}
+
+// ---- History workbench ----------------------------------------------------------
+
+// Edit history: one row per change to a transaction, with before → after.
+// entryId is plain text (not a link) so the history survives a deletion.
+model EntryChange {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entryId   String
+  action    String // CREATE | UPDATE | DELETE | BULK | RULE | IMPORT | UNDO | CONVERT
+  summary   String
+  before    String? // JSON snapshot
+  after     String? // JSON snapshot
+  createdAt DateTime @default(now())
+
+  @@index([userId, entryId])
+  @@index([userId, action, createdAt])
+}
+
+// "If details contain X → set category / link asset / link loan / set account".
+model Rule {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contains   String // matched case-insensitively against the details
+  appliesTo  String   @default("ANY") // ANY | EXPENSE | INCOME
+  categoryId String?
+  assetId    String?
+  loanId     String?
+  accountId  String?
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
 }

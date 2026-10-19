@@ -13,11 +13,15 @@ export type Option = {
 
 /** Everything the Add/Edit transaction form needs, as plain serialisable data. */
 export async function getFormData(db: UserDb, assetThresholdCents: number) {
-  const [accounts, fixedAssets, loans, debts, lastIncome, lastExpense, lastTransfer] = await Promise.all([
+  const [accounts, fixedAssets, loans, debts, rules, lastIncome, lastExpense, lastTransfer] = await Promise.all([
     getAccountsWithBalances(db),
     db.fixedAsset.findMany({ select: { id: true, name: true, status: true }, orderBy: { purchaseDate: "desc" } }),
     db.loan.findMany({ select: { id: true, counterparty: true, kind: true, status: true }, orderBy: { startDate: "desc" } }),
     db.debt.findMany({ select: { accountId: true, creditLimit: true } }),
+    db.rule.findMany({
+      where: { active: true },
+      select: { id: true, contains: true, appliesTo: true, categoryId: true, assetId: true, loanId: true, accountId: true },
+    }),
     lastLines(db, "INCOME"),
     lastLines(db, "EXPENSE"),
     lastLines(db, "TRANSFER"),
@@ -60,6 +64,8 @@ export async function getFormData(db: UserDb, assetThresholdCents: number) {
       active: l.status === "ACTIVE",
     })),
     assetThreshold: assetThresholdCents,
+    // Rules are suggested (never applied silently) when the details match.
+    rules,
     // The account used last time for each form, so it's pre-selected next time.
     defaults: {
       incomeAccountId: assetLine(lastIncome, 1),

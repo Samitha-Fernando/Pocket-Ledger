@@ -8,7 +8,7 @@ Under the hood every transaction is **double-entry**: money always moves *from* 
 account *to* another, so balances always reconcile. You never have to think in
 debits and credits; you fill in a simple form and the app records both sides.
 
-> Status: **Phase 5 Part A (Excel import)** is complete. Part B (History workbench) is next. See [CHANGELOG.md](CHANGELOG.md) and the
+> Status: **Phase 5 (Excel import + History workbench)** is complete. See [CHANGELOG.md](CHANGELOG.md) and the
 > full plan in [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md).
 
 ---
@@ -157,6 +157,25 @@ Demo logins (all fake):
 - **Upload a newer version later** and only the new rows are added.
 - **Undo** removes everything an import created (including assets it bought).
 - Uses SheetJS 0.20.3 from its official site (the npm copy is outdated).
+
+## History workbench
+
+- **Find anything**: quick ranges (this month, last month, this year, all time) or
+  your own dates; search the details; filter by type, account, category, amount,
+  import, or "linked to an asset / loan"; sort by date or amount; group by day, month
+  or category. Totals update with the filters, and the filters live in the page
+  address (bookmark them).
+- **Fix many at once**: tick transactions (or "select all"), then change category or
+  account, link to an asset or loan, convert expenses to assets / transfers / card or
+  loan payments, or delete. Asset, lending and card/loan movements are changed on
+  their own pages, so they can't be ticked.
+- **Rules** (History → Rules): "if the details contain *TW* → link to asset *Bike*"
+  (and/or set category / account / loan). See how many past transactions a rule would
+  change, then apply it. On the Add form, matching rules are **suggested** with an
+  Apply button; they're never applied without you.
+- **Edit history**: every transaction page shows what changed, when and how (added,
+  edited, bulk change, rule, import, undo), with before → after. Settings lists
+  recently deleted transactions.
 
 ## How sign-in and privacy work
 

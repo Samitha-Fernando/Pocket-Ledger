@@ -26,6 +26,9 @@ Full product brief: `docs/PROJECT_BRIEF.md`. The owner is not a developer.
 - Excel import: `src/lib/import/` (parse.ts pure; mapping.ts pure; batch.ts stage/post/undo).
   Posted entries carry `importRowId`. Never print or copy the user's real spreadsheet;
   dry-run against a throwaway DB (data/dryrun.db) and report counts only.
+- Edit history: `src/lib/ledger/history.ts` (EntryChange, snapshots). saveEntry/deleteEntry record it;
+  pass `opts.change` for BULK/RULE/CONVERT. Bulk ops: `bulk.ts`; rules: `rules.ts` (+ browser-safe
+  `rule-match.ts`); workbench search: `search.ts`.
 - Tests share `tests/helpers.ts#resetDb` — add new tables there (children first).
 - Asset photos: `src/lib/uploads.ts` (./uploads, git-ignored), served only via
   `/api/assets/[id]/photo` after an ownership check.

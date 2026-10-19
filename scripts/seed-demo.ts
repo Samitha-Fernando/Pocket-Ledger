@@ -318,6 +318,16 @@ async function main() {
       }
       debtCount = 1;
     }
+    // ---- Example rules (suggested on the Add form; can be applied to the past) ----
+    if (index === 0) {
+      const scooter = await db.fixedAsset.findFirst({ where: { name: "Honda Dio scooter" } });
+      await db.rule.createMany({
+        data: [
+          { contains: "service", appliesTo: "EXPENSE", categoryId: acc["Assets Repairs & Maintenance"], assetId: scooter?.id ?? null },
+          { contains: "fuel", appliesTo: "EXPENSE", categoryId: acc["Transportation"] },
+        ] as never,
+      });
+    }
     console.log(`  ${u.name}: ${count} demo transactions, ${assets.length} asset(s), ${loanCount} loan(s), ${debtCount} debt(s)`);
   }
 

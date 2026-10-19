@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
-import { ArrowDownUpIcon, PackageIcon, TriangleAlertIcon } from "lucide-react";
+import { ArrowDownUpIcon, PackageIcon, TriangleAlertIcon, WandSparklesIcon } from "lucide-react";
 import { AssetFields } from "@/components/asset-fields";
 import { Switch } from "@/components/ui/switch";
 import { FormMessage, SubmitButton } from "@/components/form-bits";
@@ -12,6 +12,7 @@ import { saveEntryAction } from "@/app/(app)/entries/actions";
 import { centsToInput, currencySymbol, formatMoney, parseMoneyToCents } from "@/lib/format";
 import type { EntryView } from "@/lib/ledger/describe";
 import type { LedgerFormData, Option } from "@/lib/ledger/form-data";
+import { ruleChanges, ruleMatches } from "@/lib/ledger/rule-match";
 import { cn } from "@/lib/utils";
 
 type Kind = "EXPENSE" | "INCOME" | "TRANSFER" | "OPENING_BALANCE";
@@ -147,6 +148,30 @@ export function EntryForm({
 
   // Warn (don't block) when an account would go below zero.
   const cents = parseMoneyToCents(amount) ?? 0;
+
+  // Rules whose text appears in the details, and what they'd change here.
+  const names = new Map<string, string>([
+    ...[...data.expenseCategories, ...data.incomeCategories, ...payOptions].map((o) => [o.id, o.name] as [string, string]),
+    ...data.fixedAssets.map((a) => [a.id, a.name] as [string, string]),
+    ...data.loans.map((l) => [l.id, l.name] as [string, string]),
+  ]);
+  const current = {
+    kind,
+    categoryId: kind === "EXPENSE" ? expenseCat : incomeCat,
+    accountId: kind === "EXPENSE" ? payFrom : receiveInto,
+    assetId: linkedAssetId || null,
+    loanId: linkedLoanId || null,
+  };
+  const suggestions = data.rules
+    .filter((r) => ruleMatches(r, details, kind))
+    .map((r) => ({ rule: r, changes: ruleChanges(r, current) }))
+    .filter((s) => Object.keys(s.changes).length > 0);
+  const applySuggestion = (changes: Record<string, string | null>) => {
+    if (changes.categoryId) (kind === "EXPENSE" ? setExpenseCat : setIncomeCat)(changes.categoryId);
+    if (changes.accountId) (kind === "EXPENSE" ? setPayFrom : setReceiveInto)(changes.accountId);
+    if (changes.assetId) setLinkedAssetId(changes.assetId);
+    if (changes.loanId) setLinkedLoanId(changes.loanId);
+  };
 
   // Asset vs expense is your choice; big purchases default to "asset".
   const overThreshold = cents >= data.assetThreshold;
@@ -331,6 +356,22 @@ export function EntryForm({
           />
         </div>
       </div>
+
+      {!isAsset &&
+        suggestions.map(({ rule, changes }) => (
+          <div key={rule.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
+            <WandSparklesIcon className="size-4 text-primary" />
+            <span className="flex-1">
+              Rule “{rule.contains}”:{" "}
+              {Object.entries(changes)
+                .map(([k, v]) => `${k === "categoryId" ? "category" : k === "accountId" ? "account" : "link to"} ${names.get(v ?? "") ?? "?"}`)
+                .join(", ")}
+            </span>
+            <button type="button" onClick={() => applySuggestion(changes)} className="h-8 rounded-full bg-primary px-3 text-xs font-medium text-primary-foreground">
+              Apply
+            </button>
+          </div>
+        ))}
 
       <FormMessage state={state} />
       {state?.success && (

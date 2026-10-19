@@ -4,6 +4,7 @@ import { ChevronLeftIcon, CreditCardIcon, HandCoinsIcon, PackageIcon } from "luc
 import { PageHeader } from "@/components/coming-soon";
 import { EntryForm } from "@/components/entry-form";
 import { EntryRow } from "@/components/entry-row";
+import { ChangeList } from "@/components/change-list";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getLedger } from "@/lib/auth/session";
@@ -29,6 +30,8 @@ export default async function EditEntryPage({ params }: PageProps<"/history/[id]
   });
   if (!raw) notFound();
   const entry = describeEntry(raw);
+  const changes = await db.entryChange.findMany({ where: { entryId: id }, orderBy: { createdAt: "desc" } });
+  const history = <ChangeList changes={changes} currency={user.currency} />;
   // Where it came from, if it was imported from a spreadsheet (kept for audit).
   const original = raw.importRow ? (JSON.parse(raw.importRow.raw) as Record<string, unknown>) : null;
   const imported = raw.importRow && original && (
@@ -80,6 +83,7 @@ export default async function EditEntryPage({ params }: PageProps<"/history/[id]
             <owner.icon /> Open {owner.label}
           </Button>
         )}
+        {history}
       </div>
     );
   }
@@ -99,6 +103,7 @@ export default async function EditEntryPage({ params }: PageProps<"/history/[id]
         </CardContent>
       </Card>
       {imported}
+      {history}
       {entry.kind === "EXPENSE" && (
         <p className="mt-3 text-center text-xs text-muted-foreground">
           Bought something that lasts? Switch on &ldquo;Record as asset?&rdquo; above to convert this expense into an asset.
