@@ -8,7 +8,7 @@ Under the hood every transaction is **double-entry**: money always moves *from* 
 account *to* another, so balances always reconcile. You never have to think in
 debits and credits; you fill in a simple form and the app records both sides.
 
-> Status: **Phase 6 (dashboard & reports)** is complete. Phase 7 (budgets) is next. See [CHANGELOG.md](CHANGELOG.md) and the
+> Status: **Phase 7 (budget planning)** is complete. Phase 8 (hosting readiness) is next, when you're ready. See [CHANGELOG.md](CHANGELOG.md) and the
 > full plan in [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md).
 
 ---
@@ -194,6 +194,28 @@ Demo logins (all fake):
   days, overdue first.
 - **Late income shift** (Settings): income on or after day N counts toward the next
   month in these reports only.
+
+## Budgets
+
+**Registers → Budgets** (also from the Budget card on Home).
+
+- **Plan**: one year at a time, laid out like the "Budget Planning" sheet: Income,
+  Expenses and Savings down the side, months across, totals and **To be allocated**
+  (income − expenses − savings). On a phone it shows one month at a time.
+  Type in a cell and it saves when you leave it. ↻ = same amount every month;
+  the copy icon on a month copies the previous month into it; "Copy <last year>"
+  starts a year from the one before.
+- Budget lines: every income and expense category, each savings account, plus two
+  special lines like the sheet: **Asset purchases** (what you paid for assets) and
+  **Debt payments** (what you paid off cards and loans; their interest counts under
+  its expense category).
+- **Budget vs actual**: pick a month or the whole year to see actual vs planned for
+  every line, with a green / amber (90%+) / red (over) bar. Income uses the late
+  income shift.
+- **Import from Excel**: upload your spreadsheet; the "Budget Planning" sheet is read
+  (all year blocks), you choose where each line goes (sensible matches are filled in,
+  "Debt" → Debt payments, "Asset Purchases" → Asset purchases), then save. Months
+  already budgeted are replaced for the lines you import, after a warning.
 
 ## How sign-in and privacy work
 

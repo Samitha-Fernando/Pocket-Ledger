@@ -2,6 +2,32 @@
 
 All notable changes, in plain English. Newest first.
 
+## Phase 7: Budget planning (2026-10-20)
+
+### Added
+- **Budgets** (Registers → Budgets): a yearly plan laid out like the "Budget Planning"
+  sheet, with Income / Expenses / Savings, months across, group totals and "To be
+  allocated". Phone view shows one month at a time. Cells save as you leave them.
+- Helpers: same amount every month (per line), copy the previous month (per month),
+  copy last year.
+- Budget lines for every income and expense category, each savings account, and the
+  two special lines from the sheet: **Asset purchases** and **Debt payments**.
+- **Budget vs actual** for any month or the whole year: actual vs planned per line,
+  remaining or over, green / amber / red bars; income uses the late income shift.
+- **Budget card on Home**: spending vs plan for the chosen period and the lines most
+  over budget.
+- **Import budgets from Excel**: reads every year block of the "Budget Planning"
+  sheet (formula values, blanks and template rows handled), preview with where each
+  line goes, warning before replacing months already budgeted.
+- Demo: a yearly budget for both demo users.
+- 8 new tests (141 total): lines, editing and copy helpers, budget vs actual for every
+  kind of line (incl. late income shift), to-be-allocated, reading a fake sheet laid
+  out like the real one, preview/replace on import, privacy.
+
+### Checked
+- The real spreadsheet's Budget Planning sheet reads as 21 lines across 2025–2027
+  (labels and counts only; nothing was copied or saved).
+
 ## Phase 6: Dashboard & reports (2026-10-20)
 
 ### Added

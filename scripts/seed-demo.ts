@@ -35,6 +35,7 @@ async function main() {
   const { createAsset } = await import("../src/lib/ledger/assets");
   const { createLoan, receiveBack } = await import("../src/lib/ledger/loans");
   const { createDebt, makePayment, monthlyInterest } = await import("../src/lib/ledger/debts");
+  const { fillYear, accountKey, DEBTS_KEY } = await import("../src/lib/ledger/budgets");
   const { shiftMonth, todayIso } = await import("../src/lib/format");
 
   for (const [index, u] of DEMO_USERS.entries()) {
@@ -330,6 +331,21 @@ async function main() {
         ] as never,
       });
     }
+    // ---- Demo budget for this year (same every month) ----
+    const year = Number(today.slice(0, 4));
+    const plan: [string, number][] = [
+      [accountKey(acc["Employment (Net)"]), 185_000 * scale],
+      [accountKey(acc["Groceries"]), 36_000 * scale],
+      [accountKey(acc["Food"]), 15_000],
+      [accountKey(acc["Transportation"]), 12_000],
+      [accountKey(acc["Utilities"]), 13_000],
+      [accountKey(acc["Fun & Vacation"]), 10_000 * scale],
+      [accountKey(acc["Body Care"]), 1_500],
+      [accountKey(acc["Savings account"]), 25_000 * scale],
+      [accountKey(acc["AIA Emergency Fund"]), 5_000],
+      [DEBTS_KEY, index === 0 ? 20_000 : 12_000],
+    ];
+    for (const [key, rupees] of plan) await fillYear(db, year, key, rs(rupees));
     console.log(`  ${u.name}: ${count} demo transactions, ${assets.length} asset(s), ${loanCount} loan(s), ${debtCount} debt(s)`);
   }
 

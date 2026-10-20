@@ -32,6 +32,8 @@ Full product brief: `docs/PROJECT_BRIEF.md`. The owner is not a developer.
 - Reports: `src/lib/ledger/reports.ts` (pure functions over ledger lines; late income shift via
   `effectiveDate`). Charts: `src/components/dashboard-charts.tsx` (Recharts; colours from
   --chart-income / --chart-expense / --chart-moved in globals.css).
+- Budgets: `src/lib/ledger/budgets.ts` (lineKey "ACCOUNT:<id>" | "ASSETS" | "DEBTS"; actuals use
+  ReportLines). Budget sheet import: `src/lib/import/budget-sheet.ts` (pure) + `budget-draft.ts`.
 - Tests share `tests/helpers.ts#resetDb` — add new tables there (children first).
 - Asset photos: `src/lib/uploads.ts` (./uploads, git-ignored), served only via
   `/api/assets/[id]/photo` after an ownership check.

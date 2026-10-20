@@ -54,6 +54,8 @@ model User {
   importRows     ImportRow[]
   entryChanges   EntryChange[]
   rules          Rule[]
+  budgets        Budget[]
+  budgetDrafts   BudgetDraft[]
 }
 
 // ---- Ledger (double-entry) ---------------------------------------------------
@@ -383,4 +385,33 @@ model Rule {
   createdAt  DateTime @default(now())
 
   @@index([userId])
+}
+
+// ---- Budgets ---------------------------------------------------------------------
+
+// One budgeted amount for one line in one month.
+// lineKey: "ACCOUNT:<id>" (income / expense category or savings account),
+//          "ASSETS" (asset purchases) or "DEBTS" (card / loan payments).
+model Budget {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  month     String // "YYYY-MM"
+  lineKey   String
+  amount    BigInt // cents
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, month, lineKey])
+  @@index([userId, month])
+}
+
+// A budget sheet that has been read but not saved yet (preview before importing).
+model BudgetDraft {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileName  String
+  data      String // JSON: the lines read from the sheet
+  createdAt DateTime @default(now())
 }

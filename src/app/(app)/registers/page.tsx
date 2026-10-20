@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRightIcon, CreditCardIcon, HandCoinsIcon, PackageIcon } from "lucide-react";
+import { ChevronRightIcon, CreditCardIcon, HandCoinsIcon, PackageIcon, PiggyBankIcon } from "lucide-react";
 import { PageHeader } from "@/components/coming-soon";
 import { getLedger } from "@/lib/auth/session";
 import { formatMoney, todayIso } from "@/lib/format";
@@ -29,6 +29,13 @@ export default async function RegistersPage() {
 
   const registers = [
     {
+      href: "/budgets",
+      icon: PiggyBankIcon,
+      title: "Budgets",
+      text: "Plan each month and compare with what you actually spent",
+      ready: true,
+    },
+    {
       href: "/assets",
       icon: PackageIcon,
       title: "Assets",
@@ -53,7 +60,7 @@ export default async function RegistersPage() {
 
   return (
     <>
-      <PageHeader title="Registers" description="Assets you own, money you have lent or invested, and money you owe." />
+      <PageHeader title="Registers" description="Your budget, assets you own, money you have lent or invested, and money you owe." />
       <div className="grid gap-3">
         {registers.map(({ href, icon: Icon, title, text, ready }) => {
           const body = (

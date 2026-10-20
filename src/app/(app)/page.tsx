@@ -23,6 +23,7 @@ import {
   trendMonths,
 } from "@/lib/ledger/reports";
 import { cn } from "@/lib/utils";
+import { actuals, compare, getBudgetLines, getBudgets, monthsBetween, totals } from "@/lib/ledger/budgets";
 
 export const metadata = { title: "Home" };
 
@@ -72,6 +73,13 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
     moved: s.moved,
   }));
   const top = topCategories(lines, period, prev);
+
+  // Budget vs actual for the period (spending lines).
+  const budgetMonths = monthsBetween(period.from, period.to);
+  const budgetRows = compare(await getBudgetLines(db), await getBudgets(db, budgetMonths), budgetMonths, actuals(lines, period.from, period.to, lateDay));
+  const budgetTotals = totals(budgetRows);
+  const overBudget = budgetRows.filter((r) => r.group === "EXPENSE" && r.status === "over").sort((a, b) => Number(a.remaining - b.remaining)).slice(0, 3);
+  const spendPct = budgetTotals.expense.budget > ZERO ? Number((budgetTotals.expense.actual * BigInt(1000)) / budgetTotals.expense.budget) / 10 : null;
 
   const sum = (pick: (a: (typeof accounts)[number]) => boolean) => accounts.filter(pick).reduce((s, a) => s + a.balance, ZERO);
   const where = [
@@ -239,6 +247,56 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
             <p className="mt-2 text-xs text-muted-foreground">
               Kept = (income − expenses) ÷ income. Moved to savings = transfers into savings accounts ÷ income (like your spreadsheet).
             </p>
+          </CardContent>
+        </Card>
+
+        {/* Budget vs actual */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Budget</CardTitle>
+            <CardDescription>Spending vs plan for this period</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            {spendPct === null ? (
+              <p className="text-sm text-muted-foreground">
+                No budget for this period yet.{" "}
+                <Link href="/budgets" className="text-primary underline-offset-4 hover:underline">
+                  Plan one
+                </Link>{" "}
+                or import your Budget Planning sheet.
+              </p>
+            ) : (
+              <>
+                <div className="flex items-baseline justify-between text-sm">
+                  <span>
+                    <span className="text-lg font-semibold tabular-nums">{money(budgetTotals.expense.actual)}</span>
+                    <span className="text-muted-foreground"> of {money(budgetTotals.expense.budget)}</span>
+                  </span>
+                  <span className={cn("tabular-nums", spendPct > 100 ? "font-medium text-destructive" : "text-muted-foreground")}>{spendPct.toFixed(0)}%</span>
+                </div>
+                <span className="h-2 overflow-hidden rounded-full bg-muted">
+                  <span
+                    className={cn("block h-full rounded-full", spendPct > 100 ? "bg-destructive" : spendPct >= 90 ? "bg-amber-500" : "bg-emerald-500")}
+                    style={{ width: `${Math.min(100, spendPct)}%` }}
+                  />
+                </span>
+                {overBudget.length > 0 ? (
+                  <ul className="grid gap-1 text-sm">
+                    {overBudget.map((r) => (
+                      <li key={r.key} className="flex justify-between gap-2">
+                        <span className="truncate">{r.label}</span>
+                        <span className="shrink-0 text-destructive tabular-nums">{money(-r.remaining)} over</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-emerald-700 dark:text-emerald-400">Every line is within budget.</p>
+                )}
+                <Link href={`/budgets?view=actual&year=${period.to.slice(0, 4)}&month=${period.key === "this-month" || period.key === "last-month" ? period.from.slice(0, 7) : "year"}`} className="text-sm text-primary underline-offset-4 hover:underline">
+                  See every line
+                </Link>
+              </>
+            )}
           </CardContent>
         </Card>
 

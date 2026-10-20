@@ -22,7 +22,7 @@ const NAV = [
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
   // Asset pages live under the Registers tab.
-  if (href === "/registers" && ["/assets", "/loans", "/debts"].some((p) => pathname.startsWith(p))) return true;
+  if (href === "/registers" && ["/assets", "/loans", "/debts", "/budgets"].some((p) => pathname.startsWith(p))) return true;
   if (href === "/history" && pathname.startsWith("/import")) return true;
   return pathname.startsWith(href);
 }

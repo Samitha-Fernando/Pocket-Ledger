@@ -33,7 +33,8 @@ const KNOWN: Record<string, string> = {
   [normalise("Wire nail selling")]: "Side Sales",
 };
 
-function findByName(accounts: AccountLite[], name: string, filter: (a: AccountLite) => boolean) {
+/** Best account match for a spreadsheet name (exact after tidying, then "contains"). */
+export function findByName(accounts: AccountLite[], name: string, filter: (a: AccountLite) => boolean) {
   const n = normalise(name);
   const wanted = KNOWN[n] ? normalise(KNOWN[n]) : n;
   const pool = accounts.filter((a) => filter(a) && !a.isSystem && !a.archived);

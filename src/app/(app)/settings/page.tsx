@@ -67,6 +67,8 @@ const ACTION_LABELS: Record<string, string> = {
   rule_created: "Rule created",
   rule_applied: "Rule applied to past transactions",
   rule_deleted: "Rule deleted",
+  budget_imported: "Budgets imported",
+  budget_year_copied: "Budget year copied",
 };
 
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
