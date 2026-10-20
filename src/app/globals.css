@@ -49,6 +49,10 @@
 }
 
 :root {
+  /* Dashboard chart colours (light) */
+  --chart-income: oklch(0.6 0.13 160);
+  --chart-expense: oklch(0.64 0.19 15);
+  --chart-moved: oklch(0.62 0.13 235);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -84,6 +88,10 @@
 }
 
 .dark {
+  /* Dashboard chart colours (dark) */
+  --chart-income: oklch(0.74 0.14 160);
+  --chart-expense: oklch(0.72 0.17 15);
+  --chart-moved: oklch(0.74 0.12 235);
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);

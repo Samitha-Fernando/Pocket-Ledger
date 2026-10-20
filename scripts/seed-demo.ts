@@ -49,6 +49,8 @@ async function main() {
       },
     });
     await prisma.auditLog.create({ data: { userId: user.id, action: "account_created", details: "Demo seed" } });
+    // Kumari counts her salary (paid on the 25th) toward the next month, like the spreadsheet setting.
+    if (index === 1) await prisma.user.update({ where: { id: user.id }, data: { lateIncomeDay: 25 } });
 
     // ---- Fake money: opening balances + ~3 months of everyday transactions ----
     const db = scopedDb(prisma, user.id);

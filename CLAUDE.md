@@ -29,6 +29,9 @@ Full product brief: `docs/PROJECT_BRIEF.md`. The owner is not a developer.
 - Edit history: `src/lib/ledger/history.ts` (EntryChange, snapshots). saveEntry/deleteEntry record it;
   pass `opts.change` for BULK/RULE/CONVERT. Bulk ops: `bulk.ts`; rules: `rules.ts` (+ browser-safe
   `rule-match.ts`); workbench search: `search.ts`.
+- Reports: `src/lib/ledger/reports.ts` (pure functions over ledger lines; late income shift via
+  `effectiveDate`). Charts: `src/components/dashboard-charts.tsx` (Recharts; colours from
+  --chart-income / --chart-expense / --chart-moved in globals.css).
 - Tests share `tests/helpers.ts#resetDb` — add new tables there (children first).
 - Asset photos: `src/lib/uploads.ts` (./uploads, git-ignored), served only via
   `/api/assets/[id]/photo` after an ownership check.

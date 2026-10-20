@@ -2,6 +2,29 @@
 
 All notable changes, in plain English. Newest first.
 
+## Phase 6: Dashboard & reports (2026-10-20)
+
+### Added
+- **Home is now a dashboard** with a period selector (this month, last month, this
+  year, last 12 months, custom dates).
+- **Net worth** now, change over the period, and a 12-month trend chart.
+- **Where your money is**: cash, bank, savings, lent out & invested, fixed assets and
+  debts, with share bars.
+- **Income vs expenses**: period totals (expenses incl. depreciation, shown
+  separately), money left over, and a 12-month bar chart.
+- **Savings rate**: "Kept" (income − expenses ÷ income) as the headline and "Moved to
+  savings" (like the spreadsheet), with a 12-month trend.
+- **Top expenses**: top 8 categories with % of spending and change vs the previous
+  period; each opens History filtered to it.
+- **Coming up**: loans due back and card/loan payments due in the next 30 days,
+  overdue first.
+- **Late income shift** applied in reports (income on/after day N counts next month).
+- Recharts 3.10.1 for charts; chart colours follow light/dark mode.
+- Demo: Kumari has the late income shift on (day 25).
+- 9 new tests (133 total): periods, late income shift (incl. the day-N edge), flows,
+  both savings rates, net worth (incl. assets at book value and debts), monthly series,
+  top categories with comparison, coming-up list, privacy.
+
 ## Phase 5 Part B: History workbench (2026-10-19)
 
 ### Added

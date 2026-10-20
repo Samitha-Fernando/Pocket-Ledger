@@ -8,7 +8,7 @@ Under the hood every transaction is **double-entry**: money always moves *from* 
 account *to* another, so balances always reconcile. You never have to think in
 debits and credits; you fill in a simple form and the app records both sides.
 
-> Status: **Phase 5 (Excel import + History workbench)** is complete. See [CHANGELOG.md](CHANGELOG.md) and the
+> Status: **Phase 6 (dashboard & reports)** is complete. Phase 7 (budgets) is next. See [CHANGELOG.md](CHANGELOG.md) and the
 > full plan in [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md).
 
 ---
@@ -176,6 +176,24 @@ Demo logins (all fake):
 - **Edit history**: every transaction page shows what changed, when and how (added,
   edited, bulk change, rule, import, undo), with before → after. Settings lists
   recently deleted transactions.
+
+## Dashboard (Home)
+
+- **Period**: this month (default), last month, this year, last 12 months, or your
+  own dates. Trend charts show the 12 months up to the end of the period.
+- **Net worth** now, its change over the period, and a 12-month trend.
+- **Where your money is**: cash, bank, savings, lent out & invested, fixed assets
+  (today's value) and debts.
+- **Income vs expenses** by month, with period totals. Expenses include depreciation
+  (shown separately), the real cost of things wearing out.
+- **Savings rate**: **Kept** = (income − expenses) ÷ income, and **Moved to savings**
+  = transfers into savings accounts ÷ income (like the spreadsheet).
+- **Top expenses** with % of spending and change vs the period before; tap one to
+  see those transactions in History.
+- **Coming up**: money due back to you and card/loan payments due in the next 30
+  days, overdue first.
+- **Late income shift** (Settings): income on or after day N counts toward the next
+  month in these reports only.
 
 ## How sign-in and privacy work
 
