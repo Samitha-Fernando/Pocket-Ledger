@@ -158,6 +158,11 @@ export async function login(_prev: FormState, fd: FormData): Promise<FormState> 
     return { error: "Email/username or password is incorrect." };
   }
 
+  if (user.disabledAt) {
+    await burnVerifyTime(password);
+    await recordAttempt("login", false, user.id);
+    return { error: "This account has been disabled. Please contact the admin." };
+  }
   const error = await checkUserPassword(user, password, "login");
   if (error) return { error };
 
@@ -184,6 +189,7 @@ export async function unlock(_prev: FormState, fd: FormData): Promise<FormState>
   }
   if (!session) redirect("/login");
   const user = session.user;
+  if (user.disabledAt) redirect("/login");
 
   if (method === "pin") {
     if (!user.pinHash || session.pinFailedCount >= MAX_FAILED_PINS) {

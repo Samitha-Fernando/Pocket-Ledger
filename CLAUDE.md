@@ -37,6 +37,13 @@ Full product brief: `docs/PROJECT_BRIEF.md`. The owner is not a developer.
 - Tests share `tests/helpers.ts#resetDb` — add new tables there (children first).
 - Asset photos: `src/lib/uploads.ts` (./uploads, git-ignored), served only via
   `/api/assets/[id]/photo` after an ownership check.
+- Local desktop use: `scripts/app.ts` (start/stop/update/shortcuts; `APP_PORT`, `APP_NO_WINDOW`
+  for automated checks) + `scripts/windows/*.vbs|cmd`. Whole-app backups: `src/lib/backup/local.ts`
+  (VACUUM INTO, keeps 30, optional copy folder in data/backup-settings.json; `BACKUP_DIR` override).
+  Never test the launcher on port 3000 or the real DB: use APP_PORT=3100 + demo.db.
+- Personal export/backup/restore: `src/lib/export/personal.ts`, served by `/api/export/[format]`.
+  New user-owned tables must be added to its export/restore table list too.
+- `User.disabledAt`: disabled users get no session (session.ts) and can't log in.
 - Next.js 16: middleware is `src/proxy.ts`. Bundled docs: `node_modules/next/dist/docs`.
 - Prisma 7: config in `prisma.config.ts`, client generated to `src/generated/prisma`,
   libSQL driver adapter. Run `npx prisma generate` after schema changes.

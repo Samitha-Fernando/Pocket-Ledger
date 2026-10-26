@@ -4,7 +4,18 @@ import { useActionState, useState } from "react";
 import { CheckIcon, CopyIcon } from "lucide-react";
 import { Field, FormMessage, SubmitButton } from "@/components/form-bits";
 import { Button } from "@/components/ui/button";
-import { changePassword, createInvite, setAssetThreshold, setAutoLock, setLateIncome, setPin } from "./actions";
+import {
+  backupNowAction,
+  changePassword,
+  createInvite,
+  restoreBackupAction,
+  setAssetThreshold,
+  setAutoLock,
+  setBackupFolderAction,
+  setCurrency,
+  setLateIncome,
+  setPin,
+} from "./actions";
 
 export function PinForm({ hasPin }: { hasPin: boolean }) {
   const [state, action] = useActionState(setPin, undefined);
@@ -112,5 +123,73 @@ export function InviteForm() {
         </div>
       )}
     </div>
+  );
+}
+
+export function CurrencyForm({ value, options }: { value: string; options: readonly string[] }) {
+  const [state, action] = useActionState(setCurrency, undefined);
+  return (
+    <form action={action} className="grid gap-3">
+      <div className="flex items-end gap-3">
+        <div className="grid flex-1 gap-1.5">
+          <label htmlFor="currency" className="text-sm font-medium">
+            Currency
+          </label>
+          <select id="currency" name="currency" defaultValue={value} className="h-11 rounded-lg border border-input bg-transparent px-2.5 text-base md:text-sm dark:bg-input/30">
+            {options.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+        <SubmitButton className="w-auto">Save</SubmitButton>
+      </div>
+      <FormMessage state={state} />
+    </form>
+  );
+}
+
+export function RestoreForm() {
+  const [state, action] = useActionState(restoreBackupAction, undefined);
+  return (
+    <form
+      action={action}
+      className="grid gap-3"
+      onSubmit={(e) => {
+        if (!window.confirm("Restore this backup into your (empty) account?")) e.preventDefault();
+      }}
+    >
+      <Field label="Backup file (.json)" name="file" type="file" accept=".json,application/json" required />
+      <FormMessage state={state} />
+      <SubmitButton variant="outline" className="sm:w-auto">
+        Restore backup
+      </SubmitButton>
+    </form>
+  );
+}
+
+export function BackupNowButton() {
+  const [state, action] = useActionState(backupNowAction, undefined);
+  return (
+    <form action={action} className="grid gap-2">
+      <SubmitButton variant="outline" className="sm:w-auto">
+        Back up now
+      </SubmitButton>
+      <FormMessage state={state} />
+    </form>
+  );
+}
+
+export function BackupFolderForm({ value }: { value: string }) {
+  const [state, action] = useActionState(setBackupFolderAction, undefined);
+  return (
+    <form action={action} className="grid gap-3">
+      <div className="flex items-end gap-3">
+        <Field label="Also copy backups to (e.g. Google Drive)" name="copyDir" defaultValue={value} placeholder="G:\My Drive" className="flex-1" />
+        <SubmitButton className="w-auto">Save</SubmitButton>
+      </div>
+      <FormMessage state={state} />
+    </form>
   );
 }

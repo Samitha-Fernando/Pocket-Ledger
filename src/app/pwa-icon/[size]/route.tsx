@@ -3,6 +3,10 @@ import { ImageResponse } from "next/og";
 // PNG app icons, drawn in code so there are no image files to maintain.
 // /pwa-icon/192, /pwa-icon/512, /pwa-icon/180 (Apple) and /pwa-icon/512-maskable.
 const VARIANTS: Record<string, { size: number; maskable: boolean }> = {
+  "16": { size: 16, maskable: false },
+  "32": { size: 32, maskable: false },
+  "48": { size: 48, maskable: false },
+  "256": { size: 256, maskable: false },
   "180": { size: 180, maskable: false },
   "192": { size: 192, maskable: false },
   "512": { size: 512, maskable: false },

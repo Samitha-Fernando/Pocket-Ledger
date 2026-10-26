@@ -16,7 +16,12 @@
     "db:studio": "prisma studio",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "postinstall": "prisma generate",
-    "check:ledger": "tsx scripts/check-ledger.ts"
+    "check:ledger": "tsx scripts/check-ledger.ts",
+    "backup": "tsx scripts/backup.ts",
+    "app:start": "tsx scripts/app.ts start",
+    "app:stop": "tsx scripts/app.ts stop",
+    "app:update": "tsx scripts/app.ts update",
+    "app:shortcuts": "tsx scripts/app.ts shortcuts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

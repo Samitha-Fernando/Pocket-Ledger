@@ -27,6 +27,7 @@ model User {
   role             Role      @default(USER)
   failedLoginCount Int       @default(0)
   lockedUntil      DateTime?
+  disabledAt       DateTime? // set by the admin: can't sign in, data kept private
 
   // Per-user settings
   autoLockMinutes Int    @default(10)

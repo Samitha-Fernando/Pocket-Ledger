@@ -102,6 +102,7 @@ export const getCurrentSession = cache(async (): Promise<CurrentSession> => {
   const session = await findSession(sha256(token));
   const now = new Date();
   if (!session || session.expiresAt < now) return { state: "none" };
+  if (session.user.disabledAt) return { state: "none" }; // disabled by the admin
 
   if (session.locked) return { state: "locked", session, user: session.user };
 

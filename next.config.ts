@@ -10,8 +10,8 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // Native modules that must run directly in Node.js, not be bundled.
   serverExternalPackages: ["@node-rs/argon2", "@libsql/client", "@prisma/adapter-libsql", "libsql"],
-  // Asset photos are up to 5 MB; leave room for the rest of the form.
-  experimental: { serverActions: { bodySizeLimit: "6mb" } },
+  // Uploads: asset photos (≤ 5 MB) and personal backups with photos (restore, ≤ 45 MB).
+  experimental: { serverActions: { bodySizeLimit: "50mb" } },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

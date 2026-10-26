@@ -33,7 +33,12 @@ const SAFE_NAME = /^[a-z0-9]+\/[a-f0-9]{32}\.(jpg|png|webp)$/;
 /** Validates and stores a photo. Returns its stored name, or an error message. */
 export async function savePhoto(userId: string, file: File): Promise<{ name: string } | { error: string }> {
   if (file.size > MAX_PHOTO_BYTES) return { error: "Photo is too large (max 5 MB)." };
-  const bytes = new Uint8Array(await file.arrayBuffer());
+  return savePhotoBytes(userId, new Uint8Array(await file.arrayBuffer()));
+}
+
+/** Stores image bytes (checked to really be JPG / PNG / WebP) for a user. */
+export async function savePhotoBytes(userId: string, bytes: Uint8Array): Promise<{ name: string } | { error: string }> {
+  if (bytes.length > MAX_PHOTO_BYTES) return { error: "Photo is too large (max 5 MB)." };
   const ext = sniff(bytes);
   if (!ext) return { error: "Photo must be a JPG, PNG or WebP image." };
 

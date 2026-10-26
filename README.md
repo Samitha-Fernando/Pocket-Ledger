@@ -8,12 +8,55 @@ Under the hood every transaction is **double-entry**: money always moves *from* 
 account *to* another, so balances always reconcile. You never have to think in
 debits and credits; you fill in a simple form and the app records both sides.
 
-> Status: **Phase 7 (budget planning)** is complete. Phase 8 (hosting readiness) is next, when you're ready. See [CHANGELOG.md](CHANGELOG.md) and the
-> full plan in [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md).
+> Status: **Phase 8 (run it on your laptop)** is complete. Hosting on a server comes later,
+> when you're ready. See [CHANGELOG.md](CHANGELOG.md) and the full plan in
+> [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md).
 
 ---
 
-## Running it on your laptop
+## Daily use: the desktop icon
+
+You don't need a server. Pocket Ledger runs on this laptop and only this laptop can
+open it.
+
+- **Double-click "Pocket Ledger" on the Desktop.** It starts quietly in the background
+  and opens in its own window (Edge or Chrome "app mode", no address bar). The first
+  click after switching on the laptop takes about 10–20 seconds; after that it's
+  instant. Clicking the icon again while it's running just opens another window.
+- Closing the window doesn't stop it (it uses very little memory). To stop it fully:
+  **Start menu → Pocket Ledger → Stop Pocket Ledger**. Restarting the laptop stops it too.
+- The Start menu folder also has **Update Pocket Ledger** (after new features are
+  added: it backs up, installs, updates the database and rebuilds, in a window that
+  shows progress) and **Back up Pocket Ledger now**.
+- Icons missing (e.g. a new laptop)? Run `npm run app:shortcuts` once.
+- If something goes wrong, details are in `data/app.log` and `data/launcher.log`.
+
+### Backups
+
+- **Automatic, once a day:** the first time you open the app each day it saves a full
+  copy (database + asset photos) in the `backups/` folder. The newest 30 are kept.
+  Updates also make a backup first.
+- **Google Drive copy:** install *Google Drive for desktop*, sign in, then in
+  **Settings → Backups on this computer** enter `G:My Drive` (or wherever "My Drive"
+  appears in File Explorer). Every backup is then also copied to
+  *My Drive → Pocket Ledger backups*, so it survives a lost or broken laptop.
+- **Restoring a full backup** (everyone's data, e.g. on a new laptop): stop Pocket
+  Ledger, then copy `pocket-ledger.db` from the backup folder over
+  `data/pocket-ledger.db`, and its `uploads` folder over `uploads/`. Start it again.
+
+### Your data (Settings → Your data)
+
+Each person can download their own data at any time:
+- **Export to Excel**: transactions, accounts, assets, lending, cards & loans and budgets
+  on separate sheets. **CSV**: just the transactions.
+- **Download my backup**: a single file with everything of yours (incl. photos).
+  It can be restored into an **empty** account, for example after moving to a server.
+
+Also in Settings: **Currency** (only changes the symbol; amounts aren't converted) and,
+for the admin, **People**: disable someone so they can't sign in (their data stays
+private and untouched) or enable them again.
+
+## Running it for development
 
 You need **Node.js 20+** installed.
 
@@ -57,6 +100,9 @@ Demo logins (all fake):
 | `npm run db:studio` | Opens a viewer for the database |
 | `npm run check:ledger` | Health check: confirms every transaction balances and lists balances (`npm run check:ledger -- demo` for the demo database) |
 | `npm run db:migrate` | After pulling new code: updates your database to the latest design |
+| `npm run backup` | Makes a full backup now (same as the Start menu item) |
+| `npm run app:start` / `app:stop` / `app:update` | What the desktop and Start menu icons run |
+| `npm run app:shortcuts` | (Re)creates the desktop and Start menu icons |
 
 ---
 
@@ -242,7 +288,7 @@ Demo logins (all fake):
 
 In production mode (`npm run build` then `npm start`), Chrome or Edge shows an
 **Install** icon in the address bar. On a phone, use **Add to Home screen**. (Phone
-install needs the app hosted with HTTPS, which comes in Phase 8.)
+install needs the app hosted with HTTPS, which comes when it moves to a server.)
 
 ## What is kept out of GitHub
 
@@ -263,6 +309,10 @@ src/app/(auth)/           sign-in, setup, register, lock, switch-user screens
 src/app/(app)/            the app itself (home, accounts, history, registers, settings)
 src/lib/auth/             sign-in, sessions, PIN, lockout rules
 src/lib/db/               database client + the per-user "scoped" client
+src/lib/backup/           daily whole-app backups (+ Google Drive copy)
+src/lib/export/           Excel/CSV export, personal backup and restore
+scripts/app.ts            desktop launcher: start, stop, update, shortcuts
+scripts/windows/          what the desktop / Start menu icons run
 src/lib/format.ts         money (stored as whole cents) and dd/MM/yyyy dates
 tests/                    automated tests
 scripts/seed-demo.ts      fake demo data

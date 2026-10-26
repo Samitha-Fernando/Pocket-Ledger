@@ -2,6 +2,38 @@
 
 All notable changes, in plain English. Newest first.
 
+## Phase 8: Run it on your laptop (2026-10-26)
+
+Hosting on a server was postponed (your choice); this phase makes the app comfortable
+to use every day on this laptop instead.
+
+### Added
+- **Desktop icon "Pocket Ledger"**: one double-click starts the app quietly in the
+  background and opens it in its own window (Edge/Chrome app mode). If it's already
+  running it just opens the window; if another program holds the port it says so.
+- **Start menu → Pocket Ledger**: Stop, Update (backup → install → database update →
+  rebuild, with a progress window) and Back up now.
+- New Pocket Ledger icon for the shortcuts, the browser tab and the installed app.
+- **Automatic daily backups** (database + photos) when the app starts, newest 30 kept,
+  plus a backup before every update. Optional **second copy folder** (e.g. Google
+  Drive's "My Drive") set in Settings. Admin can see the latest backup and back up now.
+- **Settings → Your data**: export to Excel (6 sheets) or CSV, download a personal
+  backup file, and restore it into an empty account (all links between transactions,
+  assets, loans, debts, rules and budgets kept).
+- **Currency setting** (symbol only).
+- **Admin → People**: disable / enable a person. Disabled people are signed out
+  everywhere and can't sign in or unlock; their data stays untouched.
+- 5 new tests (146 total): export sheets, CSV, privacy, full backup → restore round trip
+  with identical balances, refusing a non-empty account or a broken file.
+
+### Checked
+- Launcher start / already running / stop / stop again, on the demo database.
+- Exports downloaded and opened; backups pass SQLite's integrity check; a disabled
+  person is sent to the sign-in page.
+
+### Later
+- Moving to a server (PostgreSQL, HTTPS, phone and friends' access).
+
 ## Phase 7: Budget planning (2026-10-20)
 
 ### Added

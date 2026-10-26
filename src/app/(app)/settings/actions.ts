@@ -7,6 +7,7 @@ import { AUTO_LOCK_MAX, AUTO_LOCK_MIN, INVITE_DAYS, checkPassword, checkPin } fr
 import { audit, getCurrentSession, requireAdmin, requireUser } from "@/lib/auth/session";
 import { type FormState, checkEmail, field, normalizeEmail } from "@/lib/auth/validate";
 import { formatMoney, parseMoneyToCents } from "@/lib/format";
+import { CURRENCIES } from "@/lib/currencies";
 
 async function confirmPassword(passwordHash: string, fd: FormData) {
   const current = fd.get("currentPassword")?.toString() ?? "";
@@ -112,5 +113,79 @@ export async function revokeInvite(fd: FormData): Promise<void> {
   const id = field(fd, "id");
   await prisma.invite.updateMany({ where: { id, usedAt: null }, data: { revokedAt: new Date() } });
   await audit(admin.id, "invite_revoked");
+  revalidatePath("/settings");
+}
+
+// ---- Currency --------------------------------------------------------------------
+
+
+export async function setCurrency(_prev: FormState, fd: FormData): Promise<FormState> {
+  const user = await requireUser();
+  const currency = field(fd, "currency");
+  if (!(CURRENCIES as readonly string[]).includes(currency)) return { error: "Choose a currency." };
+  await prisma.user.update({ where: { id: user.id }, data: { currency } });
+  revalidatePath("/", "layout");
+  return { success: "Currency saved. (Amounts aren't converted; only the symbol changes.)" };
+}
+
+// ---- Your data: restore a personal backup -------------------------------------------
+
+export async function restoreBackupAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  const user = await requireUser();
+  const file = fd.get("file");
+  if (!(file instanceof File) || file.size === 0) return { error: "Choose your backup file (.json)." };
+  if (file.size > 45 * 1024 * 1024) return { error: "That file is too large." };
+  const { scopedDb } = await import("@/lib/db/scoped");
+  const { restoreBackup } = await import("@/lib/export/personal");
+  const { LedgerError } = await import("@/lib/ledger/engine");
+  try {
+    const counts = await restoreBackup(scopedDb(prisma, user.id), user.id, await file.text());
+    await audit(user.id, "backup_restored", `${counts.entry ?? 0} transactions`);
+  } catch (err) {
+    if (err instanceof LedgerError) return { error: err.message };
+    throw err;
+  }
+  revalidatePath("/", "layout");
+  return { success: "Backup restored. Everything is back." };
+}
+
+// ---- Admin: whole-app backups on this computer ------------------------------------
+
+export async function backupNowAction(): Promise<FormState> {
+  const admin = await requireAdmin();
+  const { runBackup } = await import("@/lib/backup/local");
+  try {
+    const r = await runBackup("Manual (Settings)");
+    await audit(admin.id, "backup_made", r.name);
+    revalidatePath("/settings");
+    if (r.copyError) return { error: `Saved on this computer, but copying to your second folder failed: ${r.copyError}` };
+    return { success: r.copiedTo ? "Backup saved on this computer and copied to your second folder." : "Backup saved on this computer." };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Backup failed." };
+  }
+}
+
+export async function setBackupFolderAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  const admin = await requireAdmin();
+  const { writeBackupSettings } = await import("@/lib/backup/local");
+  const error = await writeBackupSettings(field(fd, "copyDir") || null);
+  if (error) return { error };
+  await audit(admin.id, "backup_folder_set");
+  revalidatePath("/settings");
+  return { success: field(fd, "copyDir") ? "Saved. Every backup will also be copied there." : "Second backup folder turned off." };
+}
+
+// ---- Admin: users --------------------------------------------------------------------
+
+export async function toggleUserDisabledAction(fd: FormData) {
+  const admin = await requireAdmin();
+  const id = field(fd, "userId");
+  if (id === admin.id) return; // you can't lock yourself out
+  const target = await prisma.user.findUnique({ where: { id } });
+  if (!target) return;
+  const disable = !target.disabledAt;
+  await prisma.user.update({ where: { id }, data: { disabledAt: disable ? new Date() : null } });
+  if (disable) await prisma.session.deleteMany({ where: { userId: id } }); // signs them out everywhere
+  await audit(admin.id, disable ? "user_disabled" : "user_enabled", target.name);
   revalidatePath("/settings");
 }

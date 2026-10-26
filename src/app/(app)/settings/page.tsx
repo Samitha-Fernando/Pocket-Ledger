@@ -8,8 +8,22 @@ import { getUserDb } from "@/lib/auth/session";
 import { centsToInput, formatDate, formatDateTime, formatMoney } from "@/lib/format";
 import type { Snapshot } from "@/lib/ledger/history";
 import { signOutAction, switchUserAction } from "../../(auth)/actions";
-import { removePin, revokeInvite } from "./actions";
-import { AssetThresholdForm, AutoLockForm, InviteForm, LateIncomeForm, PasswordForm, PinForm } from "./forms";
+import { removePin, revokeInvite, toggleUserDisabledAction } from "./actions";
+import {
+  AssetThresholdForm,
+  AutoLockForm,
+  BackupFolderForm,
+  BackupNowButton,
+  CurrencyForm,
+  InviteForm,
+  LateIncomeForm,
+  PasswordForm,
+  PinForm,
+  RestoreForm,
+} from "./forms";
+import { backupDir, copySubfolder, listBackups, readBackupSettings } from "@/lib/backup/local";
+import { CURRENCIES } from "@/lib/currencies";
+import { isEmptyAccount } from "@/lib/export/personal";
 import Link from "next/link";
 
 export const metadata = { title: "Settings" };
@@ -67,6 +81,11 @@ const ACTION_LABELS: Record<string, string> = {
   rule_created: "Rule created",
   rule_applied: "Rule applied to past transactions",
   rule_deleted: "Rule deleted",
+  backup_restored: "Backup restored",
+  backup_made: "Backup made",
+  backup_folder_set: "Backup folder changed",
+  user_disabled: "Person disabled",
+  user_enabled: "Person enabled",
   budget_imported: "Budgets imported",
   budget_year_copied: "Budget year copied",
 };
@@ -96,6 +115,27 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
 
   // Activity comes through the user-scoped client: it can only ever return this user's rows.
   const activity = await db.auditLog.findMany({ orderBy: { createdAt: "desc" }, take: 10 });
+  const emptyAccount = await isEmptyAccount(db);
+  // Admin only: whole-app backups and the list of people.
+  const isAdmin = user.role === "ADMIN";
+  const [backups, backupSettings, people] = isAdmin
+    ? await Promise.all([
+        listBackups(),
+        readBackupSettings(),
+        prisma.user.findMany({
+          orderBy: { createdAt: "asc" },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            disabledAt: true,
+            createdAt: true,
+            sessions: { select: { lastActiveAt: true }, orderBy: { lastActiveAt: "desc" }, take: 1 },
+          },
+        }),
+      ])
+    : [[], { copyDir: null }, []];
   // Transactions removed recently (their edit history is kept even after deletion).
   const deleted = await db.entryChange.findMany({
     where: { action: { in: ["DELETE", "UNDO", "BULK", "CONVERT"] }, after: null },
@@ -179,6 +219,35 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
           <LateIncomeForm day={user.lateIncomeDay} />
         </Section>
 
+        <Section title="Currency" description="The symbol shown on amounts.">
+          <CurrencyForm value={user.currency} options={CURRENCIES} />
+        </Section>
+
+        <Section title="Your data" description="Only your own data is included. Keep a backup somewhere safe; you can restore it later, e.g. on a server.">
+          <div className="grid gap-4">
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" className="h-11" render={<a href="/api/export/xlsx" download />} nativeButton={false}>
+                Export to Excel
+              </Button>
+              <Button variant="outline" className="h-11" render={<a href="/api/export/csv" download />} nativeButton={false}>
+                Export transactions (CSV)
+              </Button>
+              <Button variant="outline" className="h-11" render={<a href="/api/export/backup" download />} nativeButton={false}>
+                Download my backup
+              </Button>
+            </div>
+            {emptyAccount ? (
+              <div className="grid gap-2 rounded-xl border p-3">
+                <p className="text-sm font-medium">Restore a backup</p>
+                <p className="text-xs text-muted-foreground">Your account is empty, so you can bring everything back from a backup file.</p>
+                <RestoreForm />
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Restoring a backup works into an empty account only (so nothing gets doubled).</p>
+            )}
+          </div>
+        </Section>
+
         <Section title="Import" description="Bring in your history from an Excel budget sheet.">
           <Button variant="outline" className="h-11" render={<Link href="/import" />} nativeButton={false}>
             Import from Excel
@@ -207,6 +276,66 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
             </form>
           </div>
         </Section>
+
+        {isAdmin && (
+          <Section
+            title="Backups on this computer"
+            description="A copy of everything (all people's data and photos) is made automatically each day when you open the app. The last 30 are kept."
+          >
+            <div className="grid gap-4 text-sm">
+              <p>
+                {backups[0] ? (
+                  <>
+                    Latest: <strong>{formatDateTime(backups[0].createdAt)}</strong> ({backups[0].reason.toLowerCase()}) · {backups.length} kept
+                  </>
+                ) : (
+                  "No backups yet."
+                )}
+              </p>
+              <p className="text-xs break-all text-muted-foreground">Saved in: {backupDir()}</p>
+              {backupSettings.copyDir && (
+                <p className="text-xs break-all text-muted-foreground">
+                  Also copied to: {backupSettings.copyDir}\{copySubfolder}
+                </p>
+              )}
+              <BackupNowButton />
+              <BackupFolderForm value={backupSettings.copyDir ?? ""} />
+              <p className="text-xs text-muted-foreground">
+                Tip: install <strong>Google Drive for desktop</strong>, then enter its &ldquo;My Drive&rdquo; folder (usually <code>G:\My Drive</code>) so a
+                copy is kept off this laptop too.
+              </p>
+            </div>
+          </Section>
+        )}
+
+        {isAdmin && (
+          <Section title="People" description="Disabled people can't sign in. Their data stays private and untouched; enable them again any time.">
+            <ul className="divide-y text-sm">
+              {people.map((p) => (
+                <li key={p.id} className="flex items-center gap-3 py-2">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">
+                      {p.name} {p.role === "ADMIN" && <span className="text-xs font-normal text-muted-foreground">(admin)</span>}
+                      {p.disabledAt && <span className="text-xs font-normal text-destructive"> · disabled</span>}
+                    </span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {p.email} · joined {formatDate(p.createdAt)}
+                      {p.sessions[0] && ` · last active ${formatDateTime(p.sessions[0].lastActiveAt)}`}
+                    </span>
+                  </span>
+                  {p.id !== user.id && (
+                    <form action={toggleUserDisabledAction}>
+                      <input type="hidden" name="userId" value={p.id} />
+                      <Button type="submit" variant="outline" size="sm" className={p.disabledAt ? "" : "text-destructive"}>
+                        {p.disabledAt ? "Enable" : "Disable"}
+                      </Button>
+                    </form>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </Section>
+        )}
 
         {user.role === "ADMIN" && (
           <Section
