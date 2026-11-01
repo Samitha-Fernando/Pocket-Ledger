@@ -1,0 +1,50 @@
+{
+  "projectId": "a0c08167-36bf-4721-8920-9b8d1923f78b",
+  "shape": "package",
+  "pkg": "pocket-ledger",
+  "globalName": "PocketLedger",
+  "buildCmd": "node .design-sync/build-css.mjs",
+  "srcDir": "src/components",
+  "tsconfig": "tsconfig.json",
+  "cssEntry": ".design-sync/.cache/ds-compiled.css",
+  "docsDir": ".design-sync/docs",
+  "guidelinesGlob": [],
+  "readmeHeader": ".design-sync/conventions.md",
+  "componentSrcMap": {
+    "Alert": "src/components/ui/alert.tsx",
+    "Button": "src/components/ui/button.tsx",
+    "Card": "src/components/ui/card.tsx",
+    "Input": "src/components/ui/input.tsx",
+    "Label": "src/components/ui/label.tsx",
+    "Separator": "src/components/ui/separator.tsx",
+    "Switch": "src/components/ui/switch.tsx",
+    "Toaster": "src/components/ui/sonner.tsx",
+    "Brand": "src/components/brand.tsx",
+    "LogoMark": "src/components/brand.tsx",
+    "ThemeToggle": "src/components/theme-toggle.tsx",
+    "ThemePicker": "src/components/theme-toggle.tsx",
+    "ConfirmButton": "src/components/confirm-button.tsx"
+  },
+  "dtsPropsFor": {
+    "Alert": "  variant?: \"default\" | \"destructive\";\n  className?: string;\n  children?: React.ReactNode;\n  /** Any other <div> attribute. */\n  [key: string]: unknown;",
+    "Button": "  variant?: \"default\" | \"outline\" | \"secondary\" | \"ghost\" | \"destructive\" | \"link\";\n  size?: \"default\" | \"xs\" | \"sm\" | \"lg\" | \"icon\" | \"icon-xs\" | \"icon-sm\" | \"icon-lg\";\n  type?: \"button\" | \"submit\" | \"reset\";\n  disabled?: boolean;\n  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;\n  className?: string;\n  children?: React.ReactNode;\n  /** Any other <button> attribute (aria-label, form, name...). */\n  [key: string]: unknown;",
+    "Card": "  size?: \"default\" | \"sm\";\n  className?: string;\n  children?: React.ReactNode;\n  /** Any other <div> attribute. */\n  [key: string]: unknown;",
+    "Input": "  type?: string;\n  value?: string | number;\n  defaultValue?: string | number;\n  placeholder?: string;\n  disabled?: boolean;\n  inputMode?: \"text\" | \"decimal\" | \"numeric\" | \"email\" | \"search\" | \"tel\" | \"url\";\n  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;\n  className?: string;\n  /** Any other <input> attribute (id, name, aria-invalid...). */\n  [key: string]: unknown;",
+    "Label": "  htmlFor?: string;\n  className?: string;\n  children?: React.ReactNode;\n  [key: string]: unknown;",
+    "Separator": "  orientation?: \"horizontal\" | \"vertical\";\n  className?: string;",
+    "Switch": "  size?: \"default\" | \"sm\";\n  checked?: boolean;\n  defaultChecked?: boolean;\n  onCheckedChange?: (checked: boolean) => void;\n  disabled?: boolean;\n  id?: string;\n  name?: string;\n  className?: string;",
+    "Toaster": "  position?: \"top-left\" | \"top-center\" | \"top-right\" | \"bottom-left\" | \"bottom-center\" | \"bottom-right\";\n  richColors?: boolean;\n  expand?: boolean;\n  duration?: number;\n  closeButton?: boolean;",
+    "Brand": "  className?: string;",
+    "LogoMark": "  className?: string;",
+    "ThemeToggle": "",
+    "ThemePicker": "",
+    "ConfirmButton": "  /** Text of the \"are you sure?\" dialog. */\n  message: string;\n  children: React.ReactNode;\n  size?: \"icon\";\n  ariaLabel?: string;"
+  },
+  "overrides": {
+    "Alert": { "cardMode": "column" },
+    "Brand": { "cardMode": "column" },
+    "ThemeToggle": { "cardMode": "column" },
+    "Toaster": { "cardMode": "single", "primaryStory": "Toasts", "viewport": "480x280" }
+  },
+  "provider": { "component": "ThemeProvider", "props": { "attribute": "class", "defaultTheme": "light" } }
+}

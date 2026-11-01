@@ -1,0 +1,27 @@
+/* Stylesheet source for the Claude Design sync (compiled by build-css.mjs).
+   The app gets Geist through next/font; Claude Design loads it from Google Fonts. */
+@import "../src/app/globals.css";
+@source "./previews";
+@source "./entry.ts";
+
+/* Safelist: a dependable core vocabulary for the design agent, even where the app
+   itself never used a class. Keep in step with conventions.md. */
+@source inline("{bg,text,border}-{background,foreground,card,card-foreground,popover,popover-foreground,primary,primary-foreground,secondary,secondary-foreground,muted,muted-foreground,accent,accent-foreground,destructive,border,input,ring}");
+@source inline("{bg,text}-{chart-1,chart-2,chart-3,chart-4,chart-5}");
+@source inline("{p,px,py,pt,pb,pl,pr,m,mx,my,mt,mb,ml,mr,gap,gap-x,gap-y,space-y,space-x}-{0,0.5,1,1.5,2,2.5,3,4,5,6,8,10,12,16}");
+@source inline("{w,h,size,min-w,max-w}-{4,5,6,8,10,12,16,20,24,32,40,48,64,72,80,96,full,fit,screen}");
+@source inline("max-w-{xs,sm,md,lg,xl,2xl,3xl,4xl,5xl,6xl}");
+@source inline("{flex,inline-flex,grid,block,inline-block,hidden,flex-col,flex-row,flex-wrap,flex-1,shrink-0,items-start,items-center,items-end,items-baseline,justify-start,justify-center,justify-end,justify-between,self-stretch,mx-auto,truncate,overflow-hidden,overflow-auto,relative,absolute,sticky,top-0,inset-0,border,border-t,border-b,border-l,border-r,divide-y,tabular-nums,uppercase,tracking-tight,tracking-wide,leading-none,leading-tight,text-left,text-center,text-right,whitespace-nowrap,shadow-sm,shadow,ring-1,opacity-50,font-mono,font-sans,min-h-screen,min-h-full}");
+@source inline("grid-cols-{1,2,3,4,6,12}");
+@source inline("{sm,md,lg}:grid-cols-{1,2,3,4}");
+@source inline("{sm,md,lg}:{flex,hidden,block,flex-row}");
+@source inline("col-span-{1,2,3,4,full}");
+@source inline("text-{xs,sm,base,lg,xl,2xl,3xl,4xl}");
+@source inline("font-{normal,medium,semibold,bold}");
+@source inline("rounded-{none,sm,md,lg,xl,2xl,full}");
+@source inline("{bg,text,border}-{primary,destructive,muted,foreground}/{5,10,20,50}");
+
+:root {
+  --font-geist-sans: "Geist";
+  --font-geist-mono: "Geist Mono";
+}
