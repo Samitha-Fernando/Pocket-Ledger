@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { historyHref } from "../history/remember";
 import { audit, getLedger } from "@/lib/auth/session";
 import { field } from "@/lib/auth/validate";
 import { type EntryInput, LedgerError, deleteEntry, saveEntry } from "@/lib/ledger/engine";
@@ -68,7 +69,7 @@ export async function saveEntryAction(prev: EntryFormState, fd: FormData): Promi
   await audit(user.id, entryId ? "entry_updated" : "entry_created", summary);
   revalidatePath("/", "layout");
 
-  if (entryId) redirect(`/history?month=${input.date.slice(0, 7)}`);
+  if (entryId) redirect(await historyHref(user.id, input.date.slice(0, 7)));
   return { success: `Saved ${formatMoney(input.amount, user.currency)}.`, savedAt: Date.now() };
 }
 
@@ -81,5 +82,5 @@ export async function deleteEntryAction(fd: FormData) {
     await audit(user.id, "entry_deleted", `${entry.kind.toLowerCase().replace("_", " ")} on ${entry.date}`);
   }
   revalidatePath("/", "layout");
-  redirect(`/history${entry ? `?month=${entry.date.slice(0, 7)}` : ""}`);
+  redirect(await historyHref(user.id, entry?.date.slice(0, 7)));
 }

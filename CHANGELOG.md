@@ -2,6 +2,13 @@
 
 All notable changes, in plain English. Newest first.
 
+## Fixes (2026-11-02)
+
+- **History keeps your filters.** After opening a transaction from a filtered list,
+  "Back", saving and deleting now return to the same filtered list (it used to jump
+  to that transaction's month). Opening History from the menu also brings back your
+  last filters, until you press **Reset** or close the app window.
+
 ## Phase 8: Run it on your laptop (2026-10-26)
 
 Hosting on a server was postponed (your choice); this phase makes the app comfortable

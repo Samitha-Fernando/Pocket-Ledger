@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { FileSpreadsheetIcon, ReceiptTextIcon, SlidersHorizontalIcon, WandSparklesIcon } from "lucide-react";
 import { PageHeader } from "@/components/coming-soon";
 import { selectClass } from "@/components/entry-form";
@@ -10,6 +11,8 @@ import { formatIsoDate, formatMoney, todayIso } from "@/lib/format";
 import { getFormData } from "@/lib/ledger/form-data";
 import { GROUPS, SORTS, TYPE_GROUPS, parseFilters, quickRanges, searchEntries } from "@/lib/ledger/search";
 import { cn } from "@/lib/utils";
+import { HISTORY_COOKIE, rememberedHistoryQuery, toQuery } from "./remember";
+import { RememberFilters } from "./remember-filters";
 import { Workbench } from "./workbench";
 
 export const metadata = { title: "History" };
@@ -18,6 +21,12 @@ export default async function HistoryPage({ searchParams }: PageProps<"/history"
   const { user, db } = await getLedger();
   const today = todayIso(user.timezone);
   const params = await searchParams;
+  // Opening History plainly (menu, Back, after saving) brings back the last filters until Reset.
+  if (Object.keys(params).length === 0) {
+    const saved = await rememberedHistoryQuery(user.id);
+    if (saved) redirect(`/history?${saved}`);
+  }
+  const query = toQuery(params, ["reset"]);
   const f = parseFilters(params, today);
 
   const [result, data, batches, debts] = await Promise.all([
@@ -33,7 +42,7 @@ export default async function HistoryPage({ searchParams }: PageProps<"/history"
   const withRange = (from: string, to: string) => {
     const p = new URLSearchParams();
     for (const [k, v] of Object.entries(params)) {
-      if (k === "from" || k === "to" || k === "month" || k === "range") continue;
+      if (k === "from" || k === "to" || k === "month" || k === "range" || k === "reset") continue;
       for (const one of Array.isArray(v) ? v : v ? [v] : []) p.append(k, one);
     }
     if (from || to) {
@@ -51,6 +60,7 @@ export default async function HistoryPage({ searchParams }: PageProps<"/history"
 
   return (
     <>
+      <RememberFilters name={HISTORY_COOKIE} value={query ? `${user.id}|${query}` : null} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <PageHeader title="History" description={rangeLabel} />
         <div className="flex gap-2">
@@ -190,7 +200,7 @@ export default async function HistoryPage({ searchParams }: PageProps<"/history"
             <Button type="submit" className="h-10">
               Apply filters
             </Button>
-            <Button variant="ghost" className="h-10" render={<Link href="/history" />} nativeButton={false}>
+            <Button variant="ghost" className="h-10" render={<Link href="/history?reset=1" />} nativeButton={false}>
               Reset
             </Button>
           </div>

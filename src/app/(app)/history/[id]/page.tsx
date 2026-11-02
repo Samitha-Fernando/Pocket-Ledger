@@ -12,6 +12,7 @@ import { formatDateTime, todayIso } from "@/lib/format";
 import { KIND_LABELS, describeEntry } from "@/lib/ledger/describe";
 import { FORM_KINDS } from "@/lib/ledger/engine";
 import { getFormData } from "@/lib/ledger/form-data";
+import { historyHref } from "../remember";
 import { DeleteEntryButton } from "./delete-button";
 
 export const metadata = { title: "Edit transaction" };
@@ -51,7 +52,7 @@ export default async function EditEntryPage({ params }: PageProps<"/history/[id]
   );
   const back = (
     <Link
-      href={`/history?month=${entry.date.slice(0, 7)}`}
+      href={await historyHref(user.id, entry.date.slice(0, 7))}
       className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
     >
       <ChevronLeftIcon className="size-4" /> History
