@@ -9,6 +9,11 @@ export function PageHeader({ title, description }: { title: string; description?
   );
 }
 
+/** Put on a page to let it use the full width of large screens (dashboards, wide tables). */
+export function WidePage() {
+  return <span data-wide-page hidden />;
+}
+
 /** Placeholder for screens that arrive in a later build phase. */
 export function ComingSoon({ icon: Icon, phase, children }: { icon: LucideIcon; phase: string; children: React.ReactNode }) {
   return (

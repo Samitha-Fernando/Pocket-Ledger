@@ -106,6 +106,12 @@ Demo logins (all fake):
 
 ---
 
+## Colours
+
+Each kind of money has one colour everywhere in the app: **your money** teal, **savings**
+blue, **money you owe** red, **lent out** purple, **assets** amber, **income** green,
+**expenses** pink. Home, Accounts and Budgets use the whole width of large screens.
+
 ## How the money works
 
 - **Accounts** are anything money sits in or flows through: *your money* (cash,

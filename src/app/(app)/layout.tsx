@@ -67,7 +67,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-5 pb-28 md:px-6 md:pb-10">{children}</main>
+        {/* Reading width by default; pages with <WidePage /> grow with the screen. */}
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-5 pb-28 has-[[data-wide-page]]:max-w-[1680px] md:px-6 md:pb-10 xl:px-8">{children}</main>
       </div>
 
       <BottomNav />

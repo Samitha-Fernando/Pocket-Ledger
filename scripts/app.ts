@@ -10,7 +10,7 @@
  */
 import "dotenv/config";
 import { execFileSync, execSync, spawn } from "node:child_process";
-import { existsSync, mkdirSync, openSync } from "node:fs";
+import { existsSync, mkdirSync, openSync, statSync } from "node:fs";
 import path from "node:path";
 
 const ROOT = process.cwd();
@@ -44,9 +44,15 @@ async function isOurAppUp() {
 /** The process id listening on our port, if any. */
 function pidOnPort(): number | null {
   try {
-    const out = execSync("netstat -ano -p tcp", { encoding: "utf8" });
-    const line = out.split(/\r?\n/).find((l) => /LISTENING/.test(l) && new RegExp(`[:.]${PORT}\\s`).test(l));
-    return line ? Number(line.trim().split(/\s+/).pop()) : null;
+    // A listening socket has no remote side (port 0). Neither netstat nor the State field is
+    // used: on some Windows builds netstat leaves listeners out and states come back wrong.
+    const out = execFileSync(
+      "powershell",
+      ["-NoProfile", "-Command", `Get-NetTCPConnection -LocalPort ${PORT} -ErrorAction SilentlyContinue | Where-Object { $_.OwningProcess -gt 0 -and $_.RemotePort -eq 0 } | Select-Object -First 1 -ExpandProperty OwningProcess`],
+      { encoding: "utf8" },
+    );
+    const pid = Number(out.trim());
+    return pid > 0 ? pid : null;
   } catch {
     return null;
   }
@@ -66,11 +72,29 @@ function openWindow() {
   else spawn("cmd", ["/c", "start", "", URL], { detached: true, stdio: "ignore", windowsHide: true }).unref();
 }
 
+/** True if the running app started before the latest build (e.g. after a fix), so it's out of date. */
+function runningOldBuild() {
+  const pid = pidOnPort();
+  const buildFile = path.join(ROOT, ".next", "BUILD_ID");
+  if (!pid || !existsSync(buildFile)) return false;
+  try {
+    const started = execFileSync("powershell", ["-NoProfile", "-Command", `(Get-Process -Id ${pid}).StartTime.ToUniversalTime().ToString('o')`], { encoding: "utf8" }).trim();
+    return new Date(started).getTime() < statSync(buildFile).mtimeMs;
+  } catch {
+    return false;
+  }
+}
+
 async function start() {
   if (await isOurAppUp()) {
-    log("Already running; opening the window.");
-    openWindow();
-    return;
+    if (!runningOldBuild()) {
+      log("Already running; opening the window.");
+      openWindow();
+      return;
+    }
+    log("A newer version has been built; restarting…");
+    stop();
+    for (let i = 0; i < 20 && (await isOurAppUp()); i++) await new Promise((r) => setTimeout(r, 500));
   }
   if (pidOnPort()) {
     notify(`Another program is using port ${PORT}, so Pocket Ledger can't start. Close it (or restart the computer) and try again.`);

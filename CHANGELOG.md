@@ -2,12 +2,38 @@
 
 All notable changes, in plain English. Newest first.
 
+## Look and layout (2026-11-08)
+
+### Changed
+- **Fits any screen.** Home, Accounts and Budgets now grow with the screen: 1 column on a
+  phone, 2 on a laptop, 3 on a big monitor (they used to stop at about 1,000 pixels wide).
+  Forms and detail pages keep a comfortable reading width.
+- **Colours for each kind of money**, the same everywhere: your money teal, savings blue,
+  money you owe red, lent out purple, assets amber, income green, expenses pink.
+- **Home**: headline tiles (net worth, income, expenses, kept), cards in an even grid,
+  taller charts on big screens. The savings-rate chart keeps to −100%…100% with even
+  steps, so one extreme month no longer squashes the rest, and its labels aren't cut off.
+- **Accounts**: summary tiles, coloured account cards with icons, long names wrap instead
+  of being cut. Income & expenses side by side with a bar for each category's share, a
+  month picker, and empty categories hidden (with "Show N empty").
+- **Budgets → Plan**: a proper spreadsheet. All 12 months and the year total fit on a
+  laptop; line names, month headings and the Year column stay put while you scroll; every
+  row the same height; amounts with commas; totals on one line; coloured Income / Expenses /
+  Savings sections; "To be allocated" green or red; this month highlighted.
+- **Budget vs actual**: spending, income and savings side by side on big screens, in their colours.
+
+### Fixed
+- Accounts on phones: cards no longer run off the right edge.
+
 ## Fixes (2026-11-02)
 
 - **History keeps your filters.** After opening a transaction from a filtered list,
   "Back", saving and deleting now return to the same filtered list (it used to jump
   to that transaction's month). Opening History from the menu also brings back your
   last filters, until you press **Reset** or close the app window.
+- **Stop Pocket Ledger works again.** On this Windows version it couldn't find the running
+  app ("Not running"), so the desktop icon kept reopening an old copy without new fixes.
+- **The desktop icon restarts an out-of-date app** by itself after an update or fix.
 
 ## Phase 8: Run it on your laptop (2026-10-26)
 

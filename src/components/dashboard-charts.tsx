@@ -33,7 +33,7 @@ export type MonthPoint = { label: string; netWorth: number; income: number; expe
 
 export function NetWorthChart({ data, currency }: { data: MonthPoint[]; currency: string }) {
   return (
-    <div className="h-48 w-full" role="img" aria-label="Net worth at the end of each month for the last 12 months">
+    <div className="h-56 w-full 2xl:h-64" role="img" aria-label="Net worth at the end of each month for the last 12 months">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <defs>
@@ -55,7 +55,7 @@ export function NetWorthChart({ data, currency }: { data: MonthPoint[]; currency
 
 export function IncomeExpenseChart({ data, currency }: { data: MonthPoint[]; currency: string }) {
   return (
-    <div className="h-56 w-full" role="img" aria-label="Income and expenses for each of the last 12 months">
+    <div className="h-60 w-full 2xl:h-64" role="img" aria-label="Income and expenses for each of the last 12 months">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barGap={2}>
           <CartesianGrid stroke={C.grid} strokeDasharray="3 3" vertical={false} />
@@ -72,13 +72,20 @@ export function IncomeExpenseChart({ data, currency }: { data: MonthPoint[]; cur
 }
 
 export function SavingsRateChart({ data }: { data: MonthPoint[] }) {
+  // Scale kept between −100% and 100% in steps of 25 or 50, so one extreme month
+  // (e.g. spending more than you earned) doesn't flatten the rest.
+  const values = data.flatMap((d) => [d.kept, d.moved]).filter((v): v is number => v !== null);
+  const low = Math.max(-100, Math.min(0, Math.floor(Math.min(0, ...values) / 25) * 25));
+  const high = Math.min(100, Math.max(50, Math.ceil(Math.max(0, ...values) / 25) * 25));
+  const step = high - low > 100 ? 50 : 25;
+  const ticks = Array.from({ length: Math.floor((high - low) / step) + 1 }, (_, i) => low + i * step);
   return (
-    <div className="h-40 w-full" role="img" aria-label="Savings rate for each of the last 12 months">
+    <div className="h-48 w-full" role="img" aria-label="Savings rate for each of the last 12 months">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid stroke={C.grid} strokeDasharray="3 3" vertical={false} />
           <XAxis dataKey="label" {...axis} />
-          <YAxis {...axis} width={40} tickFormatter={(v) => `${v}%`} />
+          <YAxis {...axis} width={48} allowDataOverflow domain={[low, high]} ticks={ticks} tickFormatter={(v) => `${v}%`} />
           <Tooltip {...tooltipStyle} formatter={(v, name) => [v === null || v === undefined ? "—" : `${Number(v).toFixed(1)}%`, name]} />
           <Legend wrapperStyle={{ fontSize: 12 }} />
           <Line type="monotone" dataKey="kept" name="Kept" stroke={C.primary} strokeWidth={2} dot={false} connectNulls />

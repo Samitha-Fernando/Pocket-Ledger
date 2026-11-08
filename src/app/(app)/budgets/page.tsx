@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronLeftIcon, ChevronRightIcon, CopyIcon, FileSpreadsheetIcon } from "lucide-react";
-import { PageHeader } from "@/components/coming-soon";
+import { PageHeader, WidePage } from "@/components/coming-soon";
+import { TONES } from "@/components/stat-tile";
 import { Button } from "@/components/ui/button";
 import { getLedger } from "@/lib/auth/session";
 import { formatMonth, formatMoney, todayIso } from "@/lib/format";
@@ -43,6 +44,7 @@ export default async function BudgetsPage({ searchParams }: PageProps<"/budgets"
 
   return (
     <>
+      <WidePage />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <PageHeader title="Budgets" description="Plan each month like your spreadsheet, then see how you're doing." />
         <Button variant="outline" className="h-10 gap-1.5" render={<Link href="/budgets/import" />} nativeButton={false}>
@@ -130,13 +132,18 @@ export default async function BudgetsPage({ searchParams }: PageProps<"/budgets"
             </div>
           </div>
 
+          <div className="mb-5 grid items-start gap-5 xl:grid-cols-2 2xl:grid-cols-3">
           {(["EXPENSE", "INCOME", "SAVINGS"] as const).map((group) => {
             const list = rows.filter((r) => r.group === group && (r.budget > BigInt(0) || r.actual !== BigInt(0)));
             if (list.length === 0) return null;
+            const tone = TONES[group === "EXPENSE" ? "expense" : group === "INCOME" ? "income" : "savings"];
             return (
-              <section key={group} className="mb-5">
-                <h2 className="mb-1.5 px-1 text-sm font-medium text-muted-foreground">{group === "EXPENSE" ? "Spending" : group === "INCOME" ? "Income" : "Savings"}</h2>
-                <ul className="divide-y overflow-hidden rounded-xl border bg-card">
+              <section key={group} className={cn(group === "EXPENSE" && "xl:row-span-2")}>
+                <h2 className={cn("mb-1.5 flex items-center gap-2 px-1 text-sm font-semibold", tone.text)}>
+                  <span className={cn("size-2.5 rounded-full", tone.bar)} />
+                  {group === "EXPENSE" ? "Spending" : group === "INCOME" ? "Income" : "Savings"}
+                </h2>
+                <ul className={cn("divide-y overflow-hidden rounded-xl border border-l-4 bg-card", tone.edge)}>
                   {list
                     .sort((a, b) => (b.percent ?? 1000) - (a.percent ?? 1000))
                     .map((r) => (
@@ -176,6 +183,7 @@ export default async function BudgetsPage({ searchParams }: PageProps<"/budgets"
               </section>
             );
           })}
+          </div>
           {user.lateIncomeDay && (
             <p className="text-xs text-muted-foreground">Income uses your late income shift: received on or after day {user.lateIncomeDay} counts toward the next month.</p>
           )}

@@ -1,7 +1,19 @@
 import Link from "next/link";
-import { ArrowDownRightIcon, ArrowUpRightIcon, CalendarClockIcon, CreditCardIcon, HandCoinsIcon, InfoIcon } from "lucide-react";
+import {
+  ArrowDownRightIcon,
+  ArrowUpRightIcon,
+  CalendarClockIcon,
+  CreditCardIcon,
+  HandCoinsIcon,
+  InfoIcon,
+  LandmarkIcon,
+  PiggyBankIcon,
+  TrendingDownIcon,
+  TrendingUpIcon,
+} from "lucide-react";
 import { IncomeExpenseChart, type MonthPoint, NetWorthChart, SavingsRateChart } from "@/components/dashboard-charts";
-import { PageHeader } from "@/components/coming-soon";
+import { PageHeader, WidePage } from "@/components/coming-soon";
+import { StatTile, TONES, type Tone } from "@/components/stat-tile";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -82,12 +94,12 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const spendPct = budgetTotals.expense.budget > ZERO ? Number((budgetTotals.expense.actual * BigInt(1000)) / budgetTotals.expense.budget) / 10 : null;
 
   const sum = (pick: (a: (typeof accounts)[number]) => boolean) => accounts.filter(pick).reduce((s, a) => s + a.balance, ZERO);
-  const where = [
-    { label: "Cash", value: sum((a) => a.type === "ASSET" && (a.subtype === "CASH" || a.subtype === "OTHER")), href: "/accounts" },
-    { label: "Bank", value: sum((a) => a.type === "ASSET" && a.subtype === "BANK"), href: "/accounts" },
-    { label: "Savings", value: sum((a) => a.type === "ASSET" && a.subtype === "SAVINGS"), href: "/accounts" },
-    { label: "Lent out & invested", value: sum((a) => a.subtype === "LENT"), href: "/loans" },
-    { label: "Fixed assets", value: sum((a) => a.subtype === "FIXED"), href: "/assets" },
+  const where: { label: string; value: bigint; href: string; tone: Tone }[] = [
+    { label: "Cash", value: sum((a) => a.type === "ASSET" && (a.subtype === "CASH" || a.subtype === "OTHER")), href: "/accounts", tone: "money" },
+    { label: "Bank", value: sum((a) => a.type === "ASSET" && a.subtype === "BANK"), href: "/accounts", tone: "money" },
+    { label: "Savings", value: sum((a) => a.type === "ASSET" && a.subtype === "SAVINGS"), href: "/accounts", tone: "savings" },
+    { label: "Lent out & invested", value: sum((a) => a.subtype === "LENT"), href: "/loans", tone: "lent" },
+    { label: "Fixed assets", value: sum((a) => a.subtype === "FIXED"), href: "/assets", tone: "assets" },
   ];
   const owned = where.reduce((s, w) => s + (w.value > ZERO ? w.value : ZERO), ZERO);
   const debts = sum((a) => a.type === "LIABILITY");
@@ -98,6 +110,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
   return (
     <>
+      <WidePage />
       <PageHeader title={`Hello, ${user.name.split(" ")[0]}`} description={`Today is ${formatIsoDate(today)}`} />
 
       {/* Period selector */}
@@ -128,16 +141,45 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         </form>
       </details>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      {/* Headline numbers for the period */}
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile
+          label="Net worth"
+          icon={LandmarkIcon}
+          value={money(netWorthNow)}
+          sub={
+            <span className={cn("inline-flex items-center gap-0.5", netWorthChange >= ZERO ? TONES.income.text : TONES.owe.text)}>
+              {netWorthChange >= ZERO ? <ArrowUpRightIcon className="size-3.5" /> : <ArrowDownRightIcon className="size-3.5" />}
+              {money(netWorthChange)} in {PERIODS[period.key].toLowerCase()}
+            </span>
+          }
+        />
+        <StatTile label="Income" icon={TrendingUpIcon} tone="income" value={money(f.income)} href={historyLink("&type=income")} sub={PERIODS[period.key]} />
+        <StatTile
+          label="Expenses"
+          icon={TrendingDownIcon}
+          tone="expense"
+          value={money(f.expenses)}
+          href={historyLink("&type=expense")}
+          sub={f.depreciation > ZERO ? `incl. ${money(f.depreciation)} depreciation` : PERIODS[period.key]}
+        />
+        <StatTile
+          label="Kept (not spent)"
+          icon={PiggyBankIcon}
+          tone="savings"
+          value={pct(kept)}
+          valueClassName={kept !== null && kept < 0 ? "text-destructive" : undefined}
+          sub={`${money(f.movedToSavings)} moved to savings (${pct(moved)})`}
+        />
+      </div>
+
+      {/* Cards: 1 column on phones, 2 on laptops, 3 on big screens; "dense" fills gaps. */}
+      <div className="grid gap-4 lg:grid-flow-row-dense lg:grid-cols-2 2xl:grid-cols-3">
         {/* Net worth */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardDescription>Net worth (what you own − what you owe)</CardDescription>
-            <CardTitle className="text-3xl tabular-nums">{money(netWorthNow)}</CardTitle>
-            <p className={cn("flex items-center gap-1 text-sm", netWorthChange >= ZERO ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400")}>
-              {netWorthChange >= ZERO ? <ArrowUpRightIcon className="size-4" /> : <ArrowDownRightIcon className="size-4" />}
-              {money(netWorthChange)} in {PERIODS[period.key].toLowerCase()}
-            </p>
+            <CardTitle>Net worth over time</CardTitle>
+            <CardDescription>What you own − what you owe, at the end of each month</CardDescription>
           </CardHeader>
           <CardContent>
             <NetWorthChart data={chartData} currency={user.currency} />
@@ -154,17 +196,23 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
             {where.map((w) => (
               <Link key={w.label} href={w.href} className="grid gap-1 rounded-lg px-1 py-0.5 hover:bg-muted/60">
                 <span className="flex justify-between text-sm">
-                  <span>{w.label}</span>
+                  <span className="flex items-center gap-2">
+                    <span className={cn("size-2 rounded-full", TONES[w.tone].bar)} />
+                    {w.label}
+                  </span>
                   <span className="font-medium tabular-nums">{money(w.value)}</span>
                 </span>
-                <span className="h-1.5 overflow-hidden rounded-full bg-muted">
-                  <span className="block h-full rounded-full bg-primary" style={{ width: `${share(w.value)}%` }} />
+                <span className="h-2 overflow-hidden rounded-full bg-muted">
+                  <span className={cn("block h-full rounded-full", TONES[w.tone].bar)} style={{ width: `${share(w.value)}%` }} />
                 </span>
               </Link>
             ))}
             <Link href="/debts" className="flex justify-between rounded-lg border-t px-1 pt-3 text-sm hover:bg-muted/60">
-              <span>Debts (cards & loans)</span>
-              <span className="font-medium tabular-nums text-rose-700 dark:text-rose-400">−{money(debts)}</span>
+              <span className="flex items-center gap-2">
+                <span className={cn("size-2 rounded-full", TONES.owe.bar)} />
+                Debts (cards & loans)
+              </span>
+              <span className={cn("font-medium tabular-nums", TONES.owe.text)}>−{money(debts)}</span>
             </Link>
           </CardContent>
         </Card>
@@ -205,21 +253,10 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Income vs expenses</CardTitle>
-            <div className="grid grid-cols-3 gap-3 pt-2 text-sm">
-              <Link href={historyLink("&type=income")} className="rounded-lg hover:bg-muted/60">
-                <span className="block text-xs text-muted-foreground">Income</span>
-                <span className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">{money(f.income)}</span>
-              </Link>
-              <Link href={historyLink("&type=expense")} className="rounded-lg hover:bg-muted/60">
-                <span className="block text-xs text-muted-foreground">Expenses</span>
-                <span className="font-semibold tabular-nums">{money(f.expenses)}</span>
-                {f.depreciation > ZERO && <span className="block text-xs text-muted-foreground">incl. {money(f.depreciation)} depreciation</span>}
-              </Link>
-              <div>
-                <span className="block text-xs text-muted-foreground">Left over</span>
-                <span className={cn("font-semibold tabular-nums", f.income - f.expenses < ZERO && "text-destructive")}>{money(f.income - f.expenses)}</span>
-              </div>
-            </div>
+            <CardDescription>
+              Each month · left over in {PERIODS[period.key].toLowerCase()}:{" "}
+              <span className={cn("font-medium tabular-nums", f.income - f.expenses < ZERO ? "text-destructive" : "text-foreground")}>{money(f.income - f.expenses)}</span>
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <IncomeExpenseChart data={chartData} currency={user.currency} />
@@ -230,17 +267,10 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         <Card>
           <CardHeader>
             <CardTitle>Savings rate</CardTitle>
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <div>
-                <span className="block text-xs text-muted-foreground">Kept (not spent)</span>
-                <span className="text-2xl font-semibold tabular-nums">{pct(kept)}</span>
-              </div>
-              <div>
-                <span className="block text-xs text-muted-foreground">Moved to savings</span>
-                <span className="text-2xl font-semibold tabular-nums">{pct(moved)}</span>
-                <span className="block text-xs text-muted-foreground">{money(f.movedToSavings)}</span>
-              </div>
-            </div>
+            <CardDescription>
+              Kept <span className="font-medium text-foreground tabular-nums">{pct(kept)}</span> · moved to savings{" "}
+              <span className="font-medium text-foreground tabular-nums">{pct(moved)}</span>
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <SavingsRateChart data={chartData} />
@@ -301,7 +331,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         </Card>
 
         {/* Top expense categories */}
-        <Card>
+        <Card className="lg:col-span-2 2xl:col-span-1">
           <CardHeader>
             <CardTitle>Top expenses</CardTitle>
             <CardDescription>Compared with the period before</CardDescription>

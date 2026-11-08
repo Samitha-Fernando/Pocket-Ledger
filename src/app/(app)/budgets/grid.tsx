@@ -10,10 +10,33 @@ import { copyMonthAction, fillYearAction, setBudgetAction } from "./actions";
 
 export type GridLine = { key: string; label: string; group: "INCOME" | "EXPENSE" | "SAVINGS" };
 
+// Each section has its own colour (same families as Home and Accounts). The "tint" classes
+// paint a see-through colour over the card colour, so sticky cells stay solid when scrolling.
 const GROUPS = [
-  { group: "INCOME", label: "Income" },
-  { group: "EXPENSE", label: "Expenses" },
-  { group: "SAVINGS", label: "Savings" },
+  {
+    group: "INCOME",
+    label: "Income",
+    edge: "border-l-emerald-500",
+    text: "text-emerald-700 dark:text-emerald-300",
+    head: "bg-card bg-linear-to-r from-emerald-500/15 to-emerald-500/15",
+    total: "bg-card bg-linear-to-r from-emerald-500/8 to-emerald-500/8",
+  },
+  {
+    group: "EXPENSE",
+    label: "Expenses",
+    edge: "border-l-pink-500",
+    text: "text-pink-700 dark:text-pink-300",
+    head: "bg-card bg-linear-to-r from-pink-500/15 to-pink-500/15",
+    total: "bg-card bg-linear-to-r from-pink-500/8 to-pink-500/8",
+  },
+  {
+    group: "SAVINGS",
+    label: "Savings",
+    edge: "border-l-sky-500",
+    text: "text-sky-700 dark:text-sky-300",
+    head: "bg-card bg-linear-to-r from-sky-500/15 to-sky-500/15",
+    total: "bg-card bg-linear-to-r from-sky-500/8 to-sky-500/8",
+  },
 ] as const;
 const SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -44,11 +67,14 @@ export function BudgetGrid({
   const months = SHORT.map((_, i) => `${year}-${String(i + 1).padStart(2, "0")}`);
   const [mobileMonth, setMobileMonth] = useState(months.includes(currentMonth) ? currentMonth : months[0]);
   const money = (c: number) => formatMoney(c, currency).replace(/\.00$/, "");
+  // Plain number with commas and no currency sign, for the grid (e.g. 185,000).
+  const num = (c: number) => money(c).replace(/[^\d,.-]/g, "");
 
   const get = (key: string, m: string) => values[key]?.[m] ?? 0;
   const total = (group: string, m: string) => lines.filter((l) => l.group === group).reduce((s, l) => s + get(l.key, m), 0);
   const allocated = (m: string) => total("INCOME", m) - total("EXPENSE", m) - total("SAVINGS", m);
   const yearTotal = (fn: (m: string) => number) => months.reduce((s, m) => s + fn(m), 0);
+  const lineYear = (key: string) => yearTotal((m) => get(key, m));
 
   const run = (fn: () => Promise<{ error?: string; success?: string } | undefined>, refresh = true) =>
     startTransition(async () => {
@@ -85,11 +111,14 @@ export function BudgetGrid({
   const cell = (line: GridLine, m: string, className?: string) => (
     <input
       key={`${line.key}-${m}-${get(line.key, m)}`}
-      defaultValue={get(line.key, m) ? centsToInput(get(line.key, m)).replace(/\.00$/, "") : ""}
+      defaultValue={get(line.key, m) ? num(get(line.key, m)) : ""}
       inputMode="decimal"
       onBlur={(e) => save(line.key, m, e.target.value)}
       onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-      className={cn("w-full rounded-md border border-transparent bg-transparent px-1.5 py-1 text-right tabular-nums outline-none hover:border-input focus:border-ring focus:bg-background", className)}
+      className={cn(
+        "h-8 w-full rounded-md border border-transparent bg-transparent px-1 text-right tabular-nums outline-none placeholder:text-muted-foreground/40 hover:border-input focus:border-ring focus:bg-background",
+        className,
+      )}
       aria-label={`${line.label} budget for ${m}`}
       placeholder="—"
     />
@@ -104,72 +133,88 @@ export function BudgetGrid({
         </p>
       )}
 
-      {/* Large screens: the whole year */}
-      <div className="hidden overflow-x-auto rounded-xl border bg-card md:block">
-        <table className="w-full min-w-[1100px] text-sm">
-          <thead className="text-xs text-muted-foreground">
-            <tr className="border-b">
-              <th className="sticky left-0 z-10 bg-card px-3 py-2 text-left font-medium">Line</th>
+      {/* Large screens: the whole year, like a spreadsheet. Line names and month headings stay put while scrolling. */}
+      <div className="hidden max-h-[calc(100dvh-14rem)] min-h-96 overflow-auto rounded-xl border bg-card shadow-xs md:block">
+        <table className="w-full min-w-[1040px] table-fixed border-separate border-spacing-0 text-[13px] 2xl:text-sm">
+          <thead>
+            <tr className="text-xs text-muted-foreground">
+              <th className="sticky top-0 left-0 z-30 w-44 min-w-44 2xl:w-56 2xl:min-w-56 border-b bg-card px-3 py-2.5 text-left font-medium">
+                Line <span className="font-normal">· amounts in {currency === "LKR" ? "Rs" : currency}</span>
+              </th>
               {months.map((m, i) => (
-                <th key={m} className={cn("px-1 py-2 text-right font-medium", m === currentMonth && "text-primary")}>
+                <th key={m} className={cn("sticky top-0 z-20 border-b bg-card px-1 py-2.5 text-right font-medium", m === currentMonth && "bg-linear-to-r from-primary/12 to-primary/12 text-primary")}>
                   <span className="flex items-center justify-end gap-1">
                     {SHORT[i]}
-                    <button type="button" onClick={() => copyPrevious(m)} title="Copy the previous month here" aria-label={`Copy previous month into ${SHORT[i]}`} className="rounded p-0.5 hover:bg-muted">
+                    <button type="button" onClick={() => copyPrevious(m)} title="Copy the previous month here" aria-label={`Copy previous month into ${SHORT[i]}`} className="rounded p-0.5 opacity-60 hover:bg-muted hover:opacity-100">
                       <CopyIcon className="size-3" />
                     </button>
                   </span>
                 </th>
               ))}
-              <th className="px-3 py-2 text-right font-medium">Year</th>
+              <th className="sticky top-0 right-0 z-30 w-24 2xl:w-28 border-b border-l bg-card px-2 py-2.5 text-right font-semibold text-foreground">Year</th>
             </tr>
           </thead>
           <tbody>
-            {GROUPS.map(({ group, label }) => (
-              <GroupRows key={group}>
-                <tr className="bg-muted/50">
-                  <td colSpan={14} className="sticky left-0 px-3 py-1.5 text-xs font-semibold tracking-wide uppercase">
-                    {label}
-                  </td>
-                </tr>
-                {lines
-                  .filter((l) => l.group === group)
-                  .map((line) => (
-                    <tr key={line.key} className="border-b last:border-0">
-                      <td className="sticky left-0 z-10 max-w-48 bg-card px-3 py-0.5">
+            {GROUPS.map((g) => {
+              const groupLines = lines.filter((l) => l.group === g.group);
+              return (
+                <GroupRows key={g.group}>
+                  <tr>
+                    <td className={cn("sticky left-0 z-10 border-b border-l-4 px-3 py-2 text-xs font-semibold tracking-wide uppercase", g.head, g.edge, g.text)}>{g.label}</td>
+                    <td colSpan={12} className={cn("border-b", g.head)} />
+                    <td className={cn("sticky right-0 z-10 border-b border-l", g.head)} />
+                  </tr>
+                  {groupLines.map((line) => (
+                    <tr key={line.key} className="group/row h-10">
+                      <td className={cn("sticky left-0 z-10 w-44 min-w-44 2xl:w-56 2xl:min-w-56 border-b border-l-4 bg-card px-3 group-hover/row:bg-muted", g.edge)}>
                         <span className="flex items-center gap-1">
-                          <span className="truncate">{line.label}</span>
-                          <button type="button" onClick={() => sameEveryMonth(line)} title="Same amount every month" aria-label={`Same every month for ${line.label}`} className="ml-auto rounded p-0.5 text-muted-foreground hover:bg-muted">
+                          <span className="truncate" title={line.label}>
+                            {line.label}
+                          </span>
+                          <button type="button" onClick={() => sameEveryMonth(line)} title="Same amount every month" aria-label={`Same every month for ${line.label}`} className="ml-auto shrink-0 rounded p-1 text-muted-foreground hover:bg-background hover:text-foreground">
                             <RepeatIcon className="size-3.5" />
                           </button>
                         </span>
                       </td>
                       {months.map((m) => (
-                        <td key={m} className="px-0.5">
+                        <td key={m} className={cn("border-b px-0.5 group-hover/row:bg-muted/50", m === currentMonth && "bg-primary/6")}>
                           {cell(line, m)}
                         </td>
                       ))}
-                      <td className="px-3 text-right text-muted-foreground tabular-nums">{money(months.reduce((s, m) => s + get(line.key, m), 0))}</td>
+                      <td className="sticky right-0 z-10 border-b border-l bg-card px-2 text-right whitespace-nowrap text-muted-foreground tabular-nums group-hover/row:bg-muted">
+                        {lineYear(line.key) ? num(lineYear(line.key)) : "—"}
+                      </td>
                     </tr>
                   ))}
-                <tr className="border-b bg-muted/30 text-xs font-medium">
-                  <td className="sticky left-0 bg-muted/30 px-3 py-1.5">Total {label.toLowerCase()}</td>
-                  {months.map((m) => (
-                    <td key={m} className="px-1.5 text-right tabular-nums">
-                      {money(total(group, m))}
-                    </td>
-                  ))}
-                  <td className="px-3 text-right tabular-nums">{money(yearTotal((m) => total(group, m)))}</td>
-                </tr>
-              </GroupRows>
-            ))}
-            <tr className="font-semibold">
-              <td className="sticky left-0 bg-card px-3 py-2">To be allocated</td>
+                  <tr className="h-10 font-semibold">
+                    <td className={cn("sticky left-0 z-10 border-b border-l-4 px-3", g.total, g.edge)}>Total {g.label.toLowerCase()}</td>
+                    {months.map((m) => (
+                      <td key={m} className={cn("border-b px-1 text-right whitespace-nowrap tabular-nums", g.total, g.text)}>
+                        {num(total(g.group, m))}
+                      </td>
+                    ))}
+                    <td className={cn("sticky right-0 z-10 border-b border-l px-2 text-right whitespace-nowrap tabular-nums", g.total, g.text)}>{num(yearTotal((m) => total(g.group, m)))}</td>
+                  </tr>
+                </GroupRows>
+              );
+            })}
+            <tr className="h-11 font-semibold">
+              <td className="sticky left-0 z-10 border-l-4 border-l-primary bg-card bg-linear-to-r from-muted to-muted px-3" title="Income − expenses − savings">
+                To be allocated
+              </td>
               {months.map((m) => (
-                <td key={m} className={cn("px-1.5 text-right text-xs tabular-nums", allocated(m) < 0 && "text-destructive")}>
-                  {money(allocated(m))}
+                <td key={m} className={cn("bg-muted px-1 text-right whitespace-nowrap tabular-nums", allocated(m) < 0 ? "text-destructive" : "text-emerald-700 dark:text-emerald-300")}>
+                  {num(allocated(m))}
                 </td>
               ))}
-              <td className={cn("px-3 text-right tabular-nums", yearTotal(allocated) < 0 && "text-destructive")}>{money(yearTotal(allocated))}</td>
+              <td
+                className={cn(
+                  "sticky right-0 z-10 border-l bg-card bg-linear-to-r from-muted to-muted px-2 text-right whitespace-nowrap tabular-nums",
+                  yearTotal(allocated) < 0 ? "text-destructive" : "text-emerald-700 dark:text-emerald-300",
+                )}
+              >
+                {num(yearTotal(allocated))}
+              </td>
             </tr>
           </tbody>
         </table>
@@ -192,9 +237,9 @@ export function BudgetGrid({
         <button type="button" onClick={() => copyPrevious(mobileMonth)} className="flex h-9 w-fit items-center gap-1.5 rounded-full border px-3 text-xs text-muted-foreground hover:bg-muted">
           <CopyIcon className="size-3.5" /> Copy the previous month here
         </button>
-        {GROUPS.map(({ group, label }) => (
-          <section key={group} className="rounded-xl border bg-card">
-            <h3 className="flex justify-between border-b px-3 py-2 text-sm font-semibold">
+        {GROUPS.map(({ group, label, edge, text, head }) => (
+          <section key={group} className={cn("overflow-hidden rounded-xl border border-l-4 bg-card", edge)}>
+            <h3 className={cn("flex justify-between border-b px-3 py-2 text-sm font-semibold", head, text)}>
               {label} <span className="tabular-nums">{money(total(group, mobileMonth))}</span>
             </h3>
             <ul className="divide-y">
@@ -212,7 +257,7 @@ export function BudgetGrid({
             </ul>
           </section>
         ))}
-        <p className={cn("flex justify-between rounded-xl border bg-card px-3 py-2 font-semibold", allocated(mobileMonth) < 0 && "text-destructive")}>
+        <p className={cn("flex justify-between rounded-xl border border-l-4 border-l-primary bg-muted px-3 py-2 font-semibold", allocated(mobileMonth) < 0 ? "text-destructive" : "text-emerald-700 dark:text-emerald-300")}>
           To be allocated <span className="tabular-nums">{money(allocated(mobileMonth))}</span>
         </p>
       </div>

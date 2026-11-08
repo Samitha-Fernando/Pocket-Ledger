@@ -44,6 +44,10 @@ Full product brief: `docs/PROJECT_BRIEF.md`. The owner is not a developer.
 - Personal export/backup/restore: `src/lib/export/personal.ts`, served by `/api/export/[format]`.
   New user-owned tables must be added to its export/restore table list too.
 - `User.disabledAt`: disabled users get no session (session.ts) and can't log in.
+- UI: colour families for kinds of money live in `TONES` (`src/components/stat-tile.tsx`, with
+  `StatTile`); reuse them rather than new colours. Pages render `<WidePage />` (`coming-soon.tsx`)
+  to use the full width; the app layout keeps others at reading width. Check layouts with
+  screenshots at 390 / 1024 / 1366 / 1920 in light and dark (demo DB, port 3100).
 - Next.js 16: middleware is `src/proxy.ts`. Bundled docs: `node_modules/next/dist/docs`.
 - Prisma 7: config in `prisma.config.ts`, client generated to `src/generated/prisma`,
   libSQL driver adapter. Run `npx prisma generate` after schema changes.
