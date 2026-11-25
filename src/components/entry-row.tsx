@@ -98,11 +98,11 @@ export function EntryRow({
       <span
         className={cn(
           "flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground",
-          entry.kind === "INCOME" && "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-          isSpend && "bg-rose-500/10 text-rose-700 dark:text-rose-400",
-          (entry.kind === "ASSET_PURCHASE" || entry.kind === "ASSET_SALE") && "bg-sky-500/10 text-sky-700 dark:text-sky-400",
-          (entry.kind === "LEND" || entry.kind === "LOAN_RETURN") && "bg-violet-500/10 text-violet-700 dark:text-violet-400",
-          (entry.kind === "BORROW" || entry.kind === "DEBT_PAYMENT") && "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+          entry.kind === "INCOME" && "bg-tone-income/12 text-tone-income",
+          isSpend && "bg-tone-expense/12 text-tone-expense",
+          (entry.kind === "ASSET_PURCHASE" || entry.kind === "ASSET_SALE") && "bg-tone-assets/12 text-tone-assets",
+          (entry.kind === "LEND" || entry.kind === "LOAN_RETURN") && "bg-tone-lent/12 text-tone-lent",
+          (entry.kind === "BORROW" || entry.kind === "DEBT_PAYMENT") && "bg-tone-owe/12 text-tone-owe",
         )}
       >
         <Icon className="size-4" />
@@ -115,7 +115,7 @@ export function EntryRow({
         </span>
       </span>
       <span className="text-right">
-        <span className={cn("block font-medium whitespace-nowrap tabular-nums", isIncome && "text-emerald-700 dark:text-emerald-400")}>
+        <span className={cn("block font-medium whitespace-nowrap tabular-nums", isIncome && "text-tone-income")}>
           {isIncome && shown > 0 ? "+" : ""}
           {formatMoney(shown, currency)}
         </span>

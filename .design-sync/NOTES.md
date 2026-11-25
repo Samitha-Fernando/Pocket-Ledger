@@ -12,7 +12,9 @@ Pocket Ledger is a Next.js app, not a published component package, so the sync i
 - Stage converter deps with `npm i esbuild ts-morph @types/react postcss playwright` in `.ds-sync/`, then `npx playwright install chromium`.
 - **Browser for checks**: the bundled Chromium download was very slow on this machine; Microsoft Edge works. Prefix validate/capture/resync with `DS_CHROMIUM_PATH="C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"`.
 - **Safelist**: `styles.src.css` has `@source inline(...)` lines so the design agent's core Tailwind vocabulary exists even where the app never used a class. `conventions.md` documents only safelisted/verified names; keep both in step.
-- **Card layouts**: Alert, Brand, ThemeToggle use `cardMode: column` (wide stories); Toaster uses `cardMode: single` (fixed-position toasts).
+- **Card layouts**: Alert, Brand, ThemeToggle, StatTile use `cardMode: column` (wide stories); Toaster uses `cardMode: single` (fixed-position toasts).
+- **next/link shim**: any synced component that imports `next/link` (StatTile does) pulls Next internals that read `process` and crash the WHOLE bundle (every card `root empty`, firstErr `process is not defined`). `cfg.tsconfig` is `.design-sync/tsconfig.json`, which extends the app tsconfig and maps `next/link` to `.design-sync/shims/next-link.tsx` (a plain `<a>`). Other `next/*` imports in future synced components need the same treatment.
+- **StatTile + TONES**: exported from `src/components/stat-tile.tsx`; TONES (colour families per kind of money) is a plain object, not a component - it rides on the bundle via entry.ts and is documented in conventions.md, not as a card.
 
 ## Known render warns
 - `[RENDER_THIN]` Toaster: toasts are fixed-position, so the measured root height is 0. Screenshot shows all three toasts correctly. Benign.
@@ -23,4 +25,6 @@ Pocket Ledger is a Next.js app, not a published component package, so the sync i
 - `entry.ts` icon list is hand-curated; a new lucide icon used in the app is not available to the design agent until added there.
 - The compiled CSS scans the whole repo, so any app class change shifts the stylesheet hash (forces upload of styling, not re-grading).
 - Fonts depend on Google Fonts being reachable from Claude Design.
+- `dtsPropsFor.StatTile` and the `tone` list in conventions.md / docs/StatTile.md mirror `TONES` keys in `stat-tile.tsx` - adding or renaming a tone needs all three updated.
 - First sync 2026-11-01: 13 components, all authored + graded good, render check clean.
+- Re-sync 2026-11-08: added StatTile (4 cells, graded good) + TONES + conventions section; 13 others verified-by-upload; render check clean.

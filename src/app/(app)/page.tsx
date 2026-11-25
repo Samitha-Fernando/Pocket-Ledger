@@ -233,7 +233,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                 {upcoming.map((u) => (
                   <li key={`${u.kind}-${u.id}`}>
                     <Link href={`/${u.kind === "loan" ? "loans" : "debts"}/${u.id}`} className="flex items-center gap-3 py-2 hover:bg-muted/60">
-                      {u.kind === "loan" ? <HandCoinsIcon className="size-4 shrink-0 text-violet-600" /> : <CreditCardIcon className="size-4 shrink-0 text-amber-600" />}
+                      {u.kind === "loan" ? <HandCoinsIcon className="size-4 shrink-0 text-tone-lent" /> : <CreditCardIcon className="size-4 shrink-0 text-tone-owe" />}
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium">{u.name}</span>
                         <span className={cn("block text-xs", u.overdue ? "font-medium text-destructive" : "text-muted-foreground")}>
@@ -306,7 +306,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                 </div>
                 <span className="h-2 overflow-hidden rounded-full bg-muted">
                   <span
-                    className={cn("block h-full rounded-full", spendPct > 100 ? "bg-destructive" : spendPct >= 90 ? "bg-amber-500" : "bg-emerald-500")}
+                    className={cn("block h-full rounded-full", spendPct > 100 ? "bg-destructive" : spendPct >= 90 ? "bg-tone-assets" : "bg-tone-income")}
                     style={{ width: `${Math.min(100, spendPct)}%` }}
                   />
                 </span>
@@ -320,7 +320,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-emerald-700 dark:text-emerald-400">Every line is within budget.</p>
+                  <p className="text-sm text-tone-income">Every line is within budget.</p>
                 )}
                 <Link href={`/budgets?view=actual&year=${period.to.slice(0, 4)}&month=${period.key === "this-month" || period.key === "last-month" ? period.from.slice(0, 7) : "year"}`} className="text-sm text-primary underline-offset-4 hover:underline">
                   See every line
@@ -356,7 +356,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
                         <span
                           className={cn(
                             "w-14 text-right text-xs tabular-nums",
-                            t.change === null ? "text-muted-foreground" : t.change > 0 ? "text-rose-700 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-400",
+                            t.change === null ? "text-muted-foreground" : t.change > 0 ? "text-tone-owe" : "text-tone-income",
                           )}
                         >
                           {t.change === null ? "new" : `${t.change > 0 ? "+" : ""}${t.change.toFixed(0)}%`}

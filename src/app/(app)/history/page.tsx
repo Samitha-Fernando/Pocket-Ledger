@@ -214,7 +214,7 @@ export default async function HistoryPage({ searchParams }: PageProps<"/history"
         </div>
         <div className="rounded-xl border bg-card p-3">
           <p className="text-xs text-muted-foreground">Income</p>
-          <p className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">{money(result.totals.income)}</p>
+          <p className="font-semibold tabular-nums text-tone-income">{money(result.totals.income)}</p>
         </div>
         <div className="rounded-xl border bg-card p-3">
           <p className="text-xs text-muted-foreground">Expenses</p>

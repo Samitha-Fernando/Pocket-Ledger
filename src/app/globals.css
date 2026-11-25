@@ -19,6 +19,14 @@
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
   --color-chart-5: var(--chart-5);
+  /* Kinds of money (one colour each, everywhere): bg-tone-money, text-tone-owe, border-l-tone-lent... */
+  --color-tone-money: var(--tone-money);
+  --color-tone-savings: var(--tone-savings);
+  --color-tone-owe: var(--tone-owe);
+  --color-tone-lent: var(--tone-lent);
+  --color-tone-assets: var(--tone-assets);
+  --color-tone-income: var(--tone-income);
+  --color-tone-expense: var(--tone-expense);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
@@ -49,10 +57,18 @@
 }
 
 :root {
-  /* Dashboard chart colours (light) */
-  --chart-income: oklch(0.6 0.13 160);
-  --chart-expense: oklch(0.64 0.19 15);
-  --chart-moved: oklch(0.62 0.13 235);
+  /* Kinds of money (light): deep, slightly muted, readable as text on white */
+  --tone-money: oklch(0.52 0.085 192);
+  --tone-savings: oklch(0.52 0.12 250);
+  --tone-owe: oklch(0.54 0.16 25);
+  --tone-lent: oklch(0.5 0.13 292);
+  --tone-assets: oklch(0.6 0.12 68);
+  --tone-income: oklch(0.54 0.11 158);
+  --tone-expense: oklch(0.55 0.13 8);
+  /* Dashboard chart colours follow the money colours */
+  --chart-income: var(--tone-income);
+  --chart-expense: var(--tone-expense);
+  --chart-moved: var(--tone-savings);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -88,10 +104,17 @@
 }
 
 .dark {
-  /* Dashboard chart colours (dark) */
-  --chart-income: oklch(0.74 0.14 160);
-  --chart-expense: oklch(0.72 0.17 15);
-  --chart-moved: oklch(0.74 0.12 235);
+  /* Kinds of money (dark): lighter, softer versions for dark surfaces */
+  --tone-money: oklch(0.76 0.085 190);
+  --tone-savings: oklch(0.74 0.1 245);
+  --tone-owe: oklch(0.71 0.13 22);
+  --tone-lent: oklch(0.74 0.11 292);
+  --tone-assets: oklch(0.8 0.1 75);
+  --tone-income: oklch(0.76 0.11 158);
+  --tone-expense: oklch(0.73 0.12 8);
+  --chart-income: var(--tone-income);
+  --chart-expense: var(--tone-expense);
+  --chart-moved: var(--tone-savings);
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);

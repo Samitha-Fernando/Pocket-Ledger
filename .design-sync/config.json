@@ -5,7 +5,7 @@
   "globalName": "PocketLedger",
   "buildCmd": "node .design-sync/build-css.mjs",
   "srcDir": "src/components",
-  "tsconfig": "tsconfig.json",
+  "tsconfig": ".design-sync/tsconfig.json",
   "cssEntry": ".design-sync/.cache/ds-compiled.css",
   "docsDir": ".design-sync/docs",
   "guidelinesGlob": [],
@@ -23,7 +23,8 @@
     "LogoMark": "src/components/brand.tsx",
     "ThemeToggle": "src/components/theme-toggle.tsx",
     "ThemePicker": "src/components/theme-toggle.tsx",
-    "ConfirmButton": "src/components/confirm-button.tsx"
+    "ConfirmButton": "src/components/confirm-button.tsx",
+    "StatTile": "src/components/stat-tile.tsx"
   },
   "dtsPropsFor": {
     "Alert": "  variant?: \"default\" | \"destructive\";\n  className?: string;\n  children?: React.ReactNode;\n  /** Any other <div> attribute. */\n  [key: string]: unknown;",
@@ -38,13 +39,33 @@
     "LogoMark": "  className?: string;",
     "ThemeToggle": "",
     "ThemePicker": "",
-    "ConfirmButton": "  /** Text of the \"are you sure?\" dialog. */\n  message: string;\n  children: React.ReactNode;\n  size?: \"icon\";\n  ariaLabel?: string;"
+    "ConfirmButton": "  /** Text of the \"are you sure?\" dialog. */\n  message: string;\n  children: React.ReactNode;\n  size?: \"icon\";\n  ariaLabel?: string;",
+    "StatTile": "  /** Small caption above the number, e.g. \"Net worth\". */\n  label: string;\n  /** The headline value, already formatted, e.g. \"Rs 1,176,815.37\". */\n  value: string;\n  /** Optional line under the value (period, change, count). */\n  sub?: React.ReactNode;\n  /** A lucide icon component from the bundle, e.g. WalletIcon. */\n  icon: React.ComponentType<{ className?: string }>;\n  /** Colour family for the kind of money: money (teal), savings (blue), owe (red), lent (purple), assets (amber), income (green), expense (pink), neutral (primary). */\n  tone?: \"money\" | \"owe\" | \"lent\" | \"assets\" | \"income\" | \"expense\" | \"savings\" | \"neutral\";\n  /** Makes the whole tile a link. */\n  href?: string;\n  /** Extra classes for the value, e.g. \"text-destructive\" for a negative figure. */\n  valueClassName?: string;\n  className?: string;"
   },
   "overrides": {
-    "Alert": { "cardMode": "column" },
-    "Brand": { "cardMode": "column" },
-    "ThemeToggle": { "cardMode": "column" },
-    "Toaster": { "cardMode": "single", "primaryStory": "Toasts", "viewport": "480x280" }
+    "Alert": {
+      "cardMode": "column"
+    },
+    "Brand": {
+      "cardMode": "column"
+    },
+    "ThemeToggle": {
+      "cardMode": "column"
+    },
+    "Toaster": {
+      "cardMode": "single",
+      "primaryStory": "Toasts",
+      "viewport": "480x280"
+    },
+    "StatTile": {
+      "cardMode": "column"
+    }
   },
-  "provider": { "component": "ThemeProvider", "props": { "attribute": "class", "defaultTheme": "light" } }
+  "provider": {
+    "component": "ThemeProvider",
+    "props": {
+      "attribute": "class",
+      "defaultTheme": "light"
+    }
+  }
 }

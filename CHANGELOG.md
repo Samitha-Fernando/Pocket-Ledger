@@ -2,6 +2,45 @@
 
 All notable changes, in plain English. Newest first.
 
+## Professional look, part B (2026-11-25)
+
+### Added
+- **Lending & investments**: headline tiles (out now, interest this year, overall return,
+  overdue), a donut **by type**, a **by person** bar list, and a **coming back** chart showing what's
+  due each week for the next 8 weeks (overdue in red).
+- **Assets**: tiles for worth now, paid and **value lost so far**, a donut **by class**, and on each
+  asset a bar showing what it's worth now as a share of what you paid.
+- **Credit cards & loans**: tiles for what you owe, monthly instalments, **credit used** (of your card
+  limits) and the **next payment**, a donut of what you owe by card/loan, a **payments coming up**
+  chart, and a usage bar on each card (red when 80% or more of the limit is used).
+- **Budget vs actual**: summary tiles and a **spending vs plan** bar; for the current month it also
+  marks how far through the month you are, so you can see if spending is ahead of an even pace.
+  Rows are tighter (bar and status on one line).
+- Each register page draws its charts in shades of its own money colour (violet, amber, red), in
+  light and dark mode. Lists fit phone screens without running off the edge.
+- 2 new tests (148 total) for grouping due dates into weeks.
+
+## Professional look, part A (2026-11-25)
+
+### Changed
+- **New colour palette** for the kinds of money: deeper, calmer versions of teal (your money),
+  blue (savings), red (owe), violet (lent), amber (assets), green (income) and rose (expenses),
+  tuned separately for day and night mode and used everywhere (Home, Accounts, Budgets, charts,
+  transaction lists, Lending, Assets).
+- **Accounts**: one summary with net worth and a bar showing what you own by kind (and what you
+  owe), then compact tables side by side - full names (no more "Amma (personal..."), type and
+  lender/due date under each name, share bar and amount. **Lent out is grouped by person**:
+  several loans to the same person fold into one line with a subtotal; open it to see each one.
+  Phones get the same compact rows.
+- **Budgets → Plan**: clean spreadsheet look - neutral section headers with a small colour dot,
+  shorter rows, plain bold totals, a strong "To be allocated" line, an **Avg / month** column on
+  big screens, and Income / Expenses / Savings can be folded away. The "same every month" button
+  shows when you point at a line.
+
+### For checking changes
+- Test builds can go to a separate folder (`NEXT_DIST_DIR=.next-preview`) so the app you have
+  open keeps working while changes are checked.
+
 ## Look and layout (2026-11-08)
 
 ### Changed

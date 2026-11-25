@@ -8,6 +8,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Test builds can go elsewhere (NEXT_DIST_DIR=.next-preview) so they never disturb the running app.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   // Native modules that must run directly in Node.js, not be bundled.
   serverExternalPackages: ["@node-rs/argon2", "@libsql/client", "@prisma/adapter-libsql", "libsql"],
   // Uploads: asset photos (≤ 5 MB) and personal backups with photos (restore, ≤ 45 MB).

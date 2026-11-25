@@ -130,7 +130,7 @@ export default async function AssetPage({ params }: PageProps<"/assets/[id]">) {
                   <span className="block font-medium">{r.details ?? "Value change"}</span>
                   <span className="block text-xs text-muted-foreground">{formatIsoDate(r.date)}</span>
                 </span>
-                <span className={cn("tabular-nums", r.amount < BigInt(0) ? "text-rose-700 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-400")}>
+                <span className={cn("tabular-nums", r.amount < BigInt(0) ? "text-tone-owe" : "text-tone-income")}>
                   {r.amount > BigInt(0) ? "+" : ""}
                   {money(r.amount)}
                 </span>

@@ -29,6 +29,16 @@ Only classes present in `styles.css` work (it is precompiled, not a live Tailwin
 
 Tokens as CSS variables, for inline styles or charts: `var(--primary)`, `var(--muted-foreground)`, `var(--border)`, `var(--radius)`, and chart colours `var(--chart-income)` (green), `var(--chart-expense)` (red), `var(--chart-moved)` (blue).
 
+## Kinds of money: one colour each
+Every kind of money has a fixed colour family, used for icons, bars, dots and left borders (never for body text or surfaces): `money` teal (cash, bank), `savings` blue, `owe` red (cards, loans), `lent` purple, `assets` amber, `income` green, `expense` pink, `neutral` primary (net worth, totals). Don't invent other colours for them; take the classes from the bundle's `TONES` export: `TONES.<tone>.chip` (icon tile bg + text), `.bar` (solid fill for bars/dots), `.text` (coloured figure), `.edge` (with `border-l-4`), `.soft` (faint tint).
+
+Headline numbers go in `StatTile` (`label`, `value` pre-formatted, `icon`, `tone`, optional `sub`, `href`), in a row like `grid grid-cols-2 gap-3 lg:grid-cols-4`:
+```jsx
+const { StatTile, TONES, TrendingUpIcon, cn } = window.PocketLedger;
+<StatTile label="Income" icon={TrendingUpIcon} tone="income" value="$6,400.00" sub="This month" />
+<span className={cn("block h-2 rounded-full", TONES.income.bar)} style={{ width: "62%" }} />
+```
+
 ## House rules
 - Money: right-aligned, `tabular-nums`, 2 decimals, e.g. `$1,250.00`; negatives with a minus sign. Dates show as dd/MM/yyyy.
 - One `Button` (default variant) per view for the main action; others `outline` or `ghost`. Deletes use `ConfirmButton`.

@@ -11,7 +11,7 @@ export const metadata = { title: "Import" };
 
 const STATUS: Record<string, { label: string; tone: string }> = {
   STAGED: { label: "Not posted yet", tone: "text-amber-700 dark:text-amber-400" },
-  POSTED: { label: "Posted", tone: "text-emerald-700 dark:text-emerald-400" },
+  POSTED: { label: "Posted", tone: "text-tone-income" },
   UNDONE: { label: "Undone", tone: "text-muted-foreground" },
 };
 

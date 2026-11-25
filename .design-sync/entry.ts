@@ -13,6 +13,7 @@ export { ThemeProvider } from "next-themes";
 export { Brand, LogoMark } from "@/components/brand";
 export { ThemeToggle, ThemePicker } from "@/components/theme-toggle";
 export { ConfirmButton } from "@/components/confirm-button";
+export { StatTile, TONES } from "@/components/stat-tile";
 export { cn } from "@/lib/utils";
 // lucide icons: the set the app uses, plus a few common extras for new screens.
 export {
@@ -25,6 +26,6 @@ export {
   ReceiptTextIcon, RepeatIcon, SendIcon, SettingsIcon, SlidersHorizontalIcon, SunIcon, Trash2Icon,
   TrendingDownIcon, TriangleAlertIcon, UndoIcon, UserPlusIcon, UsersIcon, WalletIcon, WandSparklesIcon,
   WrenchIcon,
-  CalendarIcon, ChevronDownIcon, DownloadIcon, EllipsisIcon, FilterIcon, SearchIcon, TrendingUpIcon,
+  CalendarIcon, ChevronDownIcon, CoinsIcon, DownloadIcon, EllipsisIcon, FilterIcon, ScaleIcon, SearchIcon, TrendingUpIcon,
   UploadIcon, XIcon,
 } from "lucide-react";

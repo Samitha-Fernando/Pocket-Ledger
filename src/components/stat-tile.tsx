@@ -3,66 +3,19 @@ import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * Colour families for kinds of money, used across Home, Accounts and Budgets so each
- * kind always looks the same. Literal class names so Tailwind keeps them.
+ * Colour families for kinds of money, used across the app so each kind always looks the
+ * same. The colours are theme tokens (--tone-* in globals.css, tuned for light and dark).
+ * Literal class names so Tailwind keeps them.
  */
 export const TONES = {
-  money: {
-    chip: "bg-teal-500/15 text-teal-700 dark:text-teal-300",
-    bar: "bg-teal-500",
-    text: "text-teal-700 dark:text-teal-300",
-    soft: "bg-teal-500/8",
-    edge: "border-l-teal-500",
-  },
-  owe: {
-    chip: "bg-rose-500/15 text-rose-700 dark:text-rose-300",
-    bar: "bg-rose-500",
-    text: "text-rose-700 dark:text-rose-300",
-    soft: "bg-rose-500/8",
-    edge: "border-l-rose-500",
-  },
-  lent: {
-    chip: "bg-violet-500/15 text-violet-700 dark:text-violet-300",
-    bar: "bg-violet-500",
-    text: "text-violet-700 dark:text-violet-300",
-    soft: "bg-violet-500/8",
-    edge: "border-l-violet-500",
-  },
-  assets: {
-    chip: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-    bar: "bg-amber-500",
-    text: "text-amber-700 dark:text-amber-300",
-    soft: "bg-amber-500/8",
-    edge: "border-l-amber-500",
-  },
-  income: {
-    chip: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-    bar: "bg-emerald-500",
-    text: "text-emerald-700 dark:text-emerald-300",
-    soft: "bg-emerald-500/8",
-    edge: "border-l-emerald-500",
-  },
-  expense: {
-    chip: "bg-pink-500/15 text-pink-700 dark:text-pink-300",
-    bar: "bg-pink-500",
-    text: "text-pink-700 dark:text-pink-300",
-    soft: "bg-pink-500/8",
-    edge: "border-l-pink-500",
-  },
-  savings: {
-    chip: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
-    bar: "bg-sky-500",
-    text: "text-sky-700 dark:text-sky-300",
-    soft: "bg-sky-500/8",
-    edge: "border-l-sky-500",
-  },
-  neutral: {
-    chip: "bg-primary/15 text-primary",
-    bar: "bg-primary",
-    text: "text-foreground",
-    soft: "bg-muted/50",
-    edge: "border-l-primary",
-  },
+  money: { chip: "bg-tone-money/12 text-tone-money", bar: "bg-tone-money", text: "text-tone-money", soft: "bg-tone-money/6", edge: "border-l-tone-money" },
+  owe: { chip: "bg-tone-owe/12 text-tone-owe", bar: "bg-tone-owe", text: "text-tone-owe", soft: "bg-tone-owe/6", edge: "border-l-tone-owe" },
+  lent: { chip: "bg-tone-lent/12 text-tone-lent", bar: "bg-tone-lent", text: "text-tone-lent", soft: "bg-tone-lent/6", edge: "border-l-tone-lent" },
+  assets: { chip: "bg-tone-assets/12 text-tone-assets", bar: "bg-tone-assets", text: "text-tone-assets", soft: "bg-tone-assets/6", edge: "border-l-tone-assets" },
+  income: { chip: "bg-tone-income/12 text-tone-income", bar: "bg-tone-income", text: "text-tone-income", soft: "bg-tone-income/6", edge: "border-l-tone-income" },
+  expense: { chip: "bg-tone-expense/12 text-tone-expense", bar: "bg-tone-expense", text: "text-tone-expense", soft: "bg-tone-expense/6", edge: "border-l-tone-expense" },
+  savings: { chip: "bg-tone-savings/12 text-tone-savings", bar: "bg-tone-savings", text: "text-tone-savings", soft: "bg-tone-savings/6", edge: "border-l-tone-savings" },
+  neutral: { chip: "bg-primary/12 text-primary", bar: "bg-primary", text: "text-foreground", soft: "bg-muted/50", edge: "border-l-primary" },
 } as const;
 export type Tone = keyof typeof TONES;
 

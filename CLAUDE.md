@@ -44,10 +44,15 @@ Full product brief: `docs/PROJECT_BRIEF.md`. The owner is not a developer.
 - Personal export/backup/restore: `src/lib/export/personal.ts`, served by `/api/export/[format]`.
   New user-owned tables must be added to its export/restore table list too.
 - `User.disabledAt`: disabled users get no session (session.ts) and can't log in.
-- UI: colour families for kinds of money live in `TONES` (`src/components/stat-tile.tsx`, with
-  `StatTile`); reuse them rather than new colours. Pages render `<WidePage />` (`coming-soon.tsx`)
+- UI: kinds of money have palette tokens `--tone-money|savings|owe|lent|assets|income|expense` in
+  `globals.css` (light + dark; Tailwind `bg-tone-*`, `text-tone-*`); `TONES` (`src/components/stat-tile.tsx`,
+  with `StatTile`) maps them to chip/bar/text/edge classes. Reuse these, never raw Tailwind hues
+  (amber stays only for warnings). Pages render `<WidePage />` (`coming-soon.tsx`)
   to use the full width; the app layout keeps others at reading width. Check layouts with
-  screenshots at 390 / 1024 / 1366 / 1920 in light and dark (demo DB, port 3100).
+  screenshots at 390 / 1024 / 1366 / 1920 in light and dark (demo DB, port 3100). Build test copies with
+  `NEXT_DIST_DIR=.next-preview` (also pass it to app:start) so the owner's running app (.next) isn't disturbed.
+- Register charts: `src/components/register-charts.tsx` (Donut, BarList, DueChart, UsageBar; shades of one
+  tone via `shade()`), week grouping in `src/lib/ledger/due-buckets.ts` (pure, tested).
 - Next.js 16: middleware is `src/proxy.ts`. Bundled docs: `node_modules/next/dist/docs`.
 - Prisma 7: config in `prisma.config.ts`, client generated to `src/generated/prisma`,
   libSQL driver adapter. Run `npx prisma generate` after schema changes.

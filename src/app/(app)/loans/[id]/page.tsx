@@ -24,7 +24,7 @@ function Stat({ label, value, note, tone }: { label: string; value: string; note
       <p
         className={cn(
           "mt-0.5 font-semibold tabular-nums",
-          tone === "good" && "text-emerald-700 dark:text-emerald-400",
+          tone === "good" && "text-tone-income",
           tone === "bad" && "text-destructive",
         )}
       >
