@@ -29,7 +29,7 @@ const TODAY = "2026-10-20";
 
 /** Builds the two lines of a simple entry for pure tests. */
 function entry(date: string, kind: string, amount: number, from: Partial<ReportLine>, to: Partial<ReportLine>): ReportLine[] {
-  const base = { date, kind, subtype: null, systemKey: null, name: "x" };
+  const base = { date, kind, subtype: null, systemKey: null, name: "x", currency: null, foreignAmount: null };
   return [
     { ...base, accountId: "from", type: "ASSET", ...from, amount: B(-amount) },
     { ...base, accountId: "to", type: "EXPENSE", ...to, amount: B(amount) },
@@ -76,8 +76,8 @@ describe("late income shift", () => {
 describe("flows, savings rates and net worth", () => {
   // Salary 100,000 in; food 30,000 and depreciation 5,000 out; 20,000 moved to savings.
   const lines: ReportLine[] = [
-    { date: "2026-10-01", kind: "INCOME", amount: B(rs(-100_000)), subtype: null, systemKey: null, ...salaryCat },
-    { date: "2026-10-01", kind: "INCOME", amount: B(rs(100_000)), systemKey: null, ...bank },
+    { date: "2026-10-01", kind: "INCOME", amount: B(rs(-100_000)), subtype: null, systemKey: null, currency: null, foreignAmount: null, ...salaryCat },
+    { date: "2026-10-01", kind: "INCOME", amount: B(rs(100_000)), systemKey: null, currency: null, foreignAmount: null, ...bank },
     ...entry("2026-10-05", "EXPENSE", rs(30_000), bank, food),
     ...entry("2026-10-31", "DEPRECIATION", rs(5_000), { accountId: "bike", type: "ASSET", subtype: "FIXED" }, dep),
     ...entry("2026-10-10", "TRANSFER", rs(20_000), bank, savings),

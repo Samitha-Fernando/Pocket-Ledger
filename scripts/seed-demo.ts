@@ -143,6 +143,23 @@ async function main() {
         }
       }
     }
+    // ---- Fake USD savings (an account in another currency): paid in dollars, part converted later ----
+    if (index === 0) {
+      const { rememberRate } = await import("../src/lib/ledger/engine");
+      const ago = (n: number) => {
+        const d = new Date(`${today}T00:00:00Z`);
+        d.setUTCDate(d.getUTCDate() - n);
+        return d.toISOString().slice(0, 10);
+      };
+      const usd = await db.account.create({ data: { name: "USD savings", type: "ASSET", subtype: "SAVINGS", currency: "USD", sortOrder: 4 } as never });
+      await saveEntry(db, { kind: "INCOME", date: ago(45), amount: 150_000, categoryId: acc["Side Sales"], accountId: usd.id, rate: "298.5", details: "Freelance invoice (USD)" });
+      await saveEntry(db, { kind: "INCOME", date: ago(15), amount: 80_000, categoryId: acc["Side Sales"], accountId: usd.id, rate: "301.2", details: "Freelance invoice (USD)" });
+      // Converted $500 when the rate was better: Rs 154,000 arrived (an exchange gain).
+      await saveEntry(db, { kind: "TRANSFER", date: ago(5), amount: 50_000, received: rs(154_000), fromId: usd.id, toId: acc["Bank account"], details: "Converted at a good rate" });
+      await db.$transaction((tx) => rememberRate(tx, "USD", today, BigInt(3_050_000)));
+      count += 3;
+    }
+
     // ---- Fake lending & investments ----
     const daysAgo = (n: number) => {
       const d = new Date(`${today}T00:00:00Z`);

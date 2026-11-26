@@ -38,6 +38,8 @@ async function transactions(db: UserDb) {
       Amount: rupees(v.amount),
       Details: v.details ?? "",
       "Linked to": v.assetName ?? v.loanName ?? v.debtName ?? "",
+      // The foreign-currency side, e.g. "USD 2000.00 @ 300".
+      "Other currency": v.currency ? `${v.currency} ${(v.foreignAmount! / 100).toFixed(2)}${v.rate ? ` @ ${v.rate}` : ""}` : v.toCurrency ? `${v.toCurrency} ${(v.toForeignAmount! / 100).toFixed(2)}${v.rate ? ` @ ${v.rate}` : ""}` : "",
     };
   });
 }
@@ -62,7 +64,17 @@ export async function exportWorkbook(db: UserDb, user: Pick<User, "name">, today
   add("Transactions", txns);
   add(
     "Accounts",
-    accounts.filter((a) => !a.isSystem || a.balance !== BigInt(0)).map((a) => ({ Name: a.name, Type: a.type, Kind: a.subtype ?? "", Archived: a.archived ? "yes" : "", Balance: rupees(a.balance) })),
+    accounts
+      .filter((a) => !a.isSystem || a.balance !== BigInt(0))
+      .map((a) => ({
+        Name: a.name,
+        Type: a.type,
+        Kind: a.subtype ?? "",
+        Currency: a.currency ?? "",
+        "Balance in its currency": a.foreignBalance !== null ? rupees(a.foreignBalance) : "",
+        Archived: a.archived ? "yes" : "",
+        Balance: rupees(a.valueNow),
+      })),
   );
   add(
     "Assets",
@@ -123,7 +135,7 @@ export async function exportCsv(db: UserDb) {
 
 // ---- Personal backup & restore -------------------------------------------------
 
-const TABLES = ["account", "fixedAsset", "loan", "debt", "importBatch", "importRow", "entry", "entryLine", "rule", "budget", "entryChange"] as const;
+const TABLES = ["account", "fixedAsset", "loan", "debt", "importBatch", "importRow", "entry", "entryLine", "rule", "budget", "entryChange", "exchangeRate"] as const;
 type Table = (typeof TABLES)[number];
 const BACKUP_VERSION = 1;
 

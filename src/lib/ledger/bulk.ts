@@ -39,14 +39,15 @@ const LABEL: Record<BulkOp["op"], string> = {
 
 /** The form input that recreates an entry as it is now. */
 export function inputFromView(v: EntryView): EntryInput | null {
-  const base = { date: v.date, amount: v.amount, details: v.details };
+  // Foreign-currency accounts keep their own amount and the rate it was recorded at.
+  const base = { date: v.date, amount: v.foreignAmount ?? v.amount, details: v.details };
   switch (v.kind) {
     case "INCOME":
-      return { kind: "INCOME", ...base, categoryId: v.categoryId!, accountId: v.accountId!, loanId: v.loanId ?? null };
+      return { kind: "INCOME", ...base, categoryId: v.categoryId!, accountId: v.accountId!, loanId: v.loanId ?? null, rate: v.rate ?? null };
     case "EXPENSE":
-      return { kind: "EXPENSE", ...base, categoryId: v.categoryId!, accountId: v.accountId!, assetId: v.assetId ?? null };
+      return { kind: "EXPENSE", ...base, categoryId: v.categoryId!, accountId: v.accountId!, assetId: v.assetId ?? null, rate: v.rate ?? null };
     case "TRANSFER":
-      return { kind: "TRANSFER", ...base, fromId: v.fromId!, toId: v.toId! };
+      return { kind: "TRANSFER", ...base, fromId: v.fromId!, toId: v.toId!, received: v.toForeignAmount ?? (v.currency ? v.amount : null) };
     default:
       return null;
   }
@@ -58,6 +59,8 @@ function changed(input: EntryInput, op: BulkOp): EntryInput | null {
     case "category":
       return input.kind === "INCOME" || input.kind === "EXPENSE" ? { ...input, categoryId: op.categoryId } : null;
     case "account":
+      // A dollar amount can't simply move to a rupee account (or the other way): edit those one by one.
+      if ((input.kind === "INCOME" || input.kind === "EXPENSE") && input.rate) return null;
       return input.kind === "INCOME" || input.kind === "EXPENSE" ? { ...input, accountId: op.accountId } : null;
     case "linkAsset":
       return input.kind === "EXPENSE" ? { ...input, assetId: op.assetId } : null;
@@ -121,7 +124,7 @@ export async function applyBulk(db: UserDb, entryIds: string[], op: BulkOp, toda
         case "toTransfer": {
           if (input.kind !== "EXPENSE") throw new SkipError();
           const from = entry.lines.find((l) => l.accountId === input.accountId)?.account;
-          if (!from || !isMoneyAccount(from)) throw new LedgerError("Only expenses paid from cash/bank can become transfers.");
+          if (!from || !isMoneyAccount(from) || from.currency) throw new LedgerError("Only expenses paid from cash/bank in your own currency can become transfers.");
           await saveEntry(db, { kind: "TRANSFER", date: input.date, amount: input.amount, details: input.details, fromId: input.accountId, toId: op.toAccountId }, entry.id, {
             change,
           });

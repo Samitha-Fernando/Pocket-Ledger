@@ -117,6 +117,8 @@ export function actuals(lines: ReportLine[], from: string, to: string, lateIncom
     if (l.type === "INCOME") add(accountKey(l.accountId), -l.amount);
     else if (l.type === "EXPENSE") add(accountKey(l.accountId), l.amount);
     else if (l.kind === "TRANSFER" && l.subtype === "SAVINGS") add(accountKey(l.accountId), l.amount);
+    // Income kept in a foreign-currency savings account (e.g. a USD salary) counts toward that savings line.
+    else if (l.kind === "INCOME" && l.subtype === "SAVINGS" && l.currency) add(accountKey(l.accountId), l.amount);
     else if (l.kind === "ASSET_PURCHASE" && l.subtype === "FIXED") add(ASSETS_KEY, l.amount);
     else if (l.kind === "DEBT_PAYMENT" && l.type === "LIABILITY") add(DEBTS_KEY, l.amount);
   }

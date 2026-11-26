@@ -9,6 +9,7 @@ import {
   changePassword,
   createInvite,
   restoreBackupAction,
+  saveRateAction,
   setAssetThreshold,
   setAutoLock,
   setBackupFolderAction,
@@ -144,6 +145,50 @@ export function CurrencyForm({ value, options }: { value: string; options: reado
           </select>
         </div>
         <SubmitButton className="w-auto">Save</SubmitButton>
+      </div>
+      <FormMessage state={state} />
+    </form>
+  );
+}
+
+/** Add or update the exchange rate for a currency on a date. */
+export function RateForm({ currencies, today, base }: { currencies: string[]; today: string; base: string }) {
+  const [state, action] = useActionState(saveRateAction, undefined);
+  return (
+    <form action={action} className="grid gap-3">
+      <div className="grid gap-3 sm:grid-cols-[auto_auto_1fr_auto] sm:items-end">
+        <div className="grid gap-1.5">
+          <label htmlFor="rate-currency" className="text-sm font-medium">
+            Currency
+          </label>
+          <select id="rate-currency" name="currency" className="h-11 rounded-lg border border-input bg-transparent px-2.5 text-base md:text-sm dark:bg-input/30">
+            {currencies.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="grid gap-1.5">
+          <label htmlFor="rate-date" className="text-sm font-medium">
+            Date
+          </label>
+          <input id="rate-date" name="date" type="date" defaultValue={today} className="h-11 rounded-lg border border-input bg-transparent px-2.5 text-base md:text-sm dark:bg-input/30" required />
+        </div>
+        <div className="grid gap-1.5">
+          <label htmlFor="rate-value" className="text-sm font-medium">
+            {base} for 1 unit
+          </label>
+          <input
+            id="rate-value"
+            name="rate"
+            inputMode="decimal"
+            placeholder="e.g. 300.25"
+            className="h-11 rounded-lg border border-input bg-transparent px-2.5 text-base tabular-nums md:text-sm dark:bg-input/30"
+            required
+          />
+        </div>
+        <SubmitButton className="w-auto">Save rate</SubmitButton>
       </div>
       <FormMessage state={state} />
     </form>

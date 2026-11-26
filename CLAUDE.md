@@ -53,6 +53,13 @@ Full product brief: `docs/PROJECT_BRIEF.md`. The owner is not a developer.
   `NEXT_DIST_DIR=.next-preview` (also pass it to app:start) so the owner's running app (.next) isn't disturbed.
 - Register charts: `src/components/register-charts.tsx` (Donut, BarList, DueChart, UsageBar; shades of one
   tone via `shade()`), week grouping in `src/lib/ledger/due-buckets.ts` (pure, tested).
+- Foreign-currency accounts: `Account.currency` (null = user's currency) on money accounts only;
+  `EntryLine.amount` is ALWAYS the user's currency, `foreignAmount` only on foreign-account lines.
+  Maths in `src/lib/ledger/fx.ts` (rate4 = rate × 10,000, average cost out, `rateOn`); `buildLines` takes an
+  `FxContext`; gains/losses post to system accounts FX_GAIN / FX_LOSS. `ExchangeRate` table (user-owned).
+  `EntryView.amount` stays in the user's currency (foreign side in `foreignAmount`/`currency`/`rate`).
+  Registers, import and rules refuse foreign accounts; `getFormData().foreign` lists them for the entry form only.
+  Values at today's rate: `getAccountsWithBalances().valueNow`, `netWorthAt(lines, date, rates)`.
 - Next.js 16: middleware is `src/proxy.ts`. Bundled docs: `node_modules/next/dist/docs`.
 - Prisma 7: config in `prisma.config.ts`, client generated to `src/generated/prisma`,
   libSQL driver adapter. Run `npx prisma generate` after schema changes.

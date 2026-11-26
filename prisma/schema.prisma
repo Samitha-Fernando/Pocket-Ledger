@@ -57,6 +57,7 @@ model User {
   rules          Rule[]
   budgets        Budget[]
   budgetDrafts   BudgetDraft[]
+  exchangeRates  ExchangeRate[]
 }
 
 // ---- Ledger (double-entry) ---------------------------------------------------
@@ -79,7 +80,10 @@ model Account {
   type      AccountType
   subtype   String? // ASSET: CASH | BANK | SAVINGS | OTHER | FIXED | LENT · LIABILITY: CARD | LOAN
   isSystem  Boolean     @default(false) // created and managed by the app (e.g. Opening Balances)
-  systemKey String? // which app-managed account: OPENING | DEPRECIATION | ASSET_GAIN | ASSET_LOSS | BAD_DEBTS
+  systemKey String? // which app-managed account: OPENING | DEPRECIATION | ASSET_GAIN | ASSET_LOSS | BAD_DEBTS | FX_GAIN | FX_LOSS
+  // Money accounts held in another currency (e.g. "USD"); null = the user's own currency.
+  // Their lines carry the foreign amount too; `amount` is always in the user's currency.
+  currency  String?
   archived  Boolean     @default(false)
   sortOrder Int         @default(0)
   createdAt DateTime    @default(now())
@@ -233,6 +237,8 @@ model EntryLine {
   accountId String
   account   Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
   amount    BigInt
+  // Only on lines of a foreign-currency account: the same movement in that currency (cents).
+  foreignAmount BigInt?
 
   @@index([entryId])
   @@index([userId, accountId])
@@ -415,4 +421,20 @@ model BudgetDraft {
   fileName  String
   data      String // JSON: the lines read from the sheet
   createdAt DateTime @default(now())
+}
+
+// Exchange rates the user enters (or that come with a USD transaction): how many of the
+// user's currency one unit of `currency` buys on `date`. rate4 = rate × 10,000 (e.g. 300.25 → 3002500).
+model ExchangeRate {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currency  String
+  date      String // "YYYY-MM-DD"
+  rate4     BigInt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, currency, date])
+  @@index([userId, currency, date])
 }

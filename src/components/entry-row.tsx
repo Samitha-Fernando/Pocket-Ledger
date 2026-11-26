@@ -75,6 +75,21 @@ function shownAmount(e: EntryView) {
   return e.amount;
 }
 
+/** For a foreign-currency transaction: the amount in that currency, and a small line with the other side. */
+function foreignParts(e: EntryView, shown: number, currency: string): { main?: string; note?: string } {
+  const fx = e.fxGain ? ` · exchange ${e.fxGain > 0 ? "gain" : "loss"} ${formatMoney(Math.abs(e.fxGain), currency)}` : "";
+  if (e.kind === "TRANSFER") {
+    if (e.currency && e.foreignAmount !== undefined) {
+      const arrived = e.toCurrency && e.toForeignAmount !== undefined ? formatMoney(e.toForeignAmount, e.toCurrency) : formatMoney(e.amount, currency);
+      return { main: formatMoney(e.foreignAmount, e.currency), note: `→ ${arrived}${e.toCurrency ? "" : ` @ ${e.rate}`}${fx}` };
+    }
+    if (e.toCurrency && e.toForeignAmount !== undefined) return { note: `→ ${formatMoney(e.toForeignAmount, e.toCurrency)} @ ${e.rate}` };
+    return {};
+  }
+  if (!e.currency || e.foreignAmount === undefined) return {};
+  return { main: formatMoney(Math.sign(shown) * e.foreignAmount, e.currency), note: `${formatMoney(Math.abs(shown), currency)} @ ${e.rate}${fx}` };
+}
+
 /** One transaction in a list. `amountOverride` shows its effect on a single account instead. */
 export function EntryRow({
   entry,
@@ -92,6 +107,7 @@ export function EntryRow({
   const shown = amountOverride ?? shownAmount(entry);
   const isIncome = entry.kind === "INCOME" && amountOverride === undefined;
   const isSpend = ["EXPENSE", "DEPRECIATION", "LOAN_WRITE_OFF", "DEBT_CHARGE"].includes(entry.kind);
+  const foreign = amountOverride === undefined ? foreignParts(entry, shown, currency) : {};
 
   return (
     <Link href={`/history/${entry.id}`} className="flex min-h-16 items-center gap-3 px-3 py-2.5 transition-colors hover:bg-muted/60">
@@ -117,8 +133,9 @@ export function EntryRow({
       <span className="text-right">
         <span className={cn("block font-medium whitespace-nowrap tabular-nums", isIncome && "text-tone-income")}>
           {isIncome && shown > 0 ? "+" : ""}
-          {formatMoney(shown, currency)}
+          {foreign.main ?? formatMoney(shown, currency)}
         </span>
+        {foreign.note && <span className="block text-[11px] whitespace-nowrap text-muted-foreground tabular-nums">{foreign.note}</span>}
         {trailing}
       </span>
     </Link>

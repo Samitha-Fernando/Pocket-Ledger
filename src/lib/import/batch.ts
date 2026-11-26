@@ -18,7 +18,7 @@ export const ROW_ACTIONS = ["EXPENSE", "INCOME", "TRANSFER", "ASSET", "DEBT_PAYM
 export type RowAction = (typeof ROW_ACTIONS)[number];
 
 async function accountsLite(db: UserDb) {
-  return db.account.findMany({ select: { id: true, name: true, type: true, subtype: true, isSystem: true, archived: true } });
+  return db.account.findMany({ select: { id: true, name: true, type: true, subtype: true, isSystem: true, archived: true, currency: true } });
 }
 
 /** Stages an uploaded workbook. Returns the batch id. */
@@ -29,7 +29,7 @@ export async function stageBatch(db: UserDb, fileName: string, parsed: ParsedWor
   const accounts = await accountsLite(db);
   const keys = [...new Map(parsed.rows.map((r) => [mappingKey(r.type, r.category), { type: r.type, category: r.category }])).values()];
   const mapping = defaultMapping(keys, accounts);
-  const money = accounts.filter((a) => isMoneyAccount(a) && !a.isSystem && !a.archived);
+  const money = accounts.filter((a) => isMoneyAccount(a) && !a.isSystem && !a.archived && !a.currency);
   const accountId = (money.find((a) => a.subtype === "BANK") ?? money[0])?.id ?? null;
   const dates = parsed.rows.map((r) => r.date).filter(Boolean).sort() as string[];
   const startingDate = dates[0] ? dayBefore(dates[0]) : null;
@@ -103,6 +103,7 @@ export async function saveMapping(
   const batch = await loadStaged(db, batchId);
   const account = await db.account.findUnique({ where: { id: input.accountId } });
   if (!account || !isMoneyAccount(account) || account.isSystem) throw new LedgerError("Choose the account the spreadsheet tracked.");
+  if (account.currency) throw new LedgerError("Spreadsheets import into an account in your own currency.");
   if (!Number.isSafeInteger(input.startingBalance)) throw new LedgerError("Enter a valid starting balance.");
   if (input.startingBalance !== 0 && !input.startingDate) throw new LedgerError("Choose the date of the starting balance.");
 

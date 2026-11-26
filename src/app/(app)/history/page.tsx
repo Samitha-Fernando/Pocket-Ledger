@@ -124,7 +124,7 @@ export default async function HistoryPage({ searchParams }: PageProps<"/history"
               <Label htmlFor="account">Account</Label>
               <select id="account" name="account" defaultValue={f.accountId} className={selectClass}>
                 <option value="">Any</option>
-                {data.payFrom.map((a) => (
+                {[...data.payFrom, ...data.foreign].map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name}
                   </option>

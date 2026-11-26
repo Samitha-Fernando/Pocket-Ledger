@@ -113,6 +113,21 @@ blue, **money you owe** red, **lent out** violet, **assets** amber, **income** g
 **expenses** rose. They're calm, slightly muted shades with separate versions for day and
 night mode. Home, Accounts and Budgets use the whole width of large screens.
 
+## Money in another currency (e.g. USD)
+
+1. **Accounts → Add → Your money**, choose the currency (e.g. USD). Its balance is kept in dollars.
+2. **Salary in dollars**: Add → Income, *Received into* the USD account, amount in $, and the rate
+   your bank used (your latest rate is filled in). It's recorded in rupees at that rate.
+3. **Converting**: Add → Transfer from the USD account to a rupee account, with the dollars sent and
+   the rupees received. The difference from what those dollars cost is recorded as an **Exchange
+   gain** or **Exchange loss**.
+4. **Today's rate**: Settings → Exchange rates. Your net worth values the dollars at the latest rate;
+   the USD account's page shows what they cost and the gain not yet converted.
+
+In budgets, plan the USD salary as income (at your expected rate) and the USD account as a savings
+line; salary kept in a USD savings account counts as saved. Assets, lending, cards and loans use
+rupee accounts (convert first).
+
 ## How the money works
 
 - **Accounts** are anything money sits in or flows through: *your money* (cash,

@@ -1,5 +1,6 @@
 import type { Account, Entry, EntryKind, EntryLine } from "@/generated/prisma/client";
 import { canPayFrom, isMoneyAccount } from "./accounts";
+import { formatRate, impliedRate } from "./fx";
 
 export type EntryWithLines = Entry & {
   lines: (EntryLine & { account: Account })[];
@@ -7,7 +8,11 @@ export type EntryWithLines = Entry & {
   loan?: { counterparty: string } | null; // include it to show the loan an interest payment is from
 };
 
-/** A transaction in the shape the forms and lists use (amount in cents). */
+/**
+ * A transaction in the shape the forms and lists use. `amount` is always cents in the user's
+ * own currency; when a foreign-currency account (e.g. USD) is involved the foreign side is in
+ * `foreignAmount` / `currency` (and for transfers between currencies `toForeignAmount` / `toCurrency`).
+ */
 export type EntryView = {
   id: string;
   kind: EntryKind;
@@ -31,7 +36,33 @@ export type EntryView = {
   debtName?: string;
   chargeAmount?: number; // interest / fees (an expense) inside a borrowing, payment or charge
   paidByCard?: boolean; // an expense or asset bought on a credit card
+  currency?: string; // the money account's currency, when it isn't the user's (transfers: the "from" side)
+  foreignAmount?: number; // the amount in that currency (positive)
+  toCurrency?: string; // transfers: the "to" account's currency, when it isn't the user's
+  toForeignAmount?: number; // transfers: the amount that arrived in that currency
+  rate?: string; // the exchange rate used, e.g. "300.25"
+  fxGain?: number; // exchange gain (+) or loss (−) recorded with it, in the user's currency
 };
+
+type LineWithAccount = EntryLine & { account: Account };
+const abs = (v: bigint) => (v < BigInt(0) ? -v : v);
+
+/** Foreign-currency details of a money line (empty for the user's own currency). */
+function foreignOf(line: LineWithAccount | undefined, baseAmount?: bigint) {
+  if (!line?.account.currency || line.foreignAmount === null || line.foreignAmount === undefined) return {};
+  const value = baseAmount ?? line.amount;
+  return {
+    currency: line.account.currency,
+    foreignAmount: Number(abs(line.foreignAmount)),
+    rate: line.foreignAmount !== BigInt(0) ? formatRate(abs(impliedRate(value, line.foreignAmount))) : undefined,
+  };
+}
+
+/** The exchange gain (+) or loss (−) inside an entry, if any. */
+function fxGainOf(lines: LineWithAccount[]) {
+  const fx = lines.filter((l) => l.account.systemKey === "FX_GAIN" || l.account.systemKey === "FX_LOSS");
+  return fx.length ? Number(-fx.reduce((s, l) => s + l.amount, BigInt(0))) : undefined;
+}
 
 /** Reads the lines of an entry back into "category / account / amount" terms. */
 export function describeEntry(entry: EntryWithLines): EntryView {
@@ -51,7 +82,8 @@ export function describeEntry(entry: EntryWithLines): EntryView {
   };
   const chargePart = Number(entry.lines.filter((l) => l.account.type === "EXPENSE").reduce((s, l) => s + l.amount, BigInt(0)));
   const incomePart = Number(-entry.lines.filter((l) => l.account.type === "INCOME").reduce((s, l) => s + l.amount, BigInt(0)));
-  const byType = (type: Account["type"]) => entry.lines.find((l) => l.account.type === type);
+  // Exchange gain / loss lines sit beside the real category; never mistake them for it.
+  const byType = (type: Account["type"]) => entry.lines.find((l) => l.account.type === type && l.account.systemKey !== "FX_GAIN" && l.account.systemKey !== "FX_LOSS");
   const fixed = entry.lines.find((l) => l.account.subtype === "FIXED");
   const money = (sign: 1 | -1) =>
     entry.lines.find((l) => isMoneyAccount(l.account) && (sign > 0 ? l.amount > BigInt(0) : l.amount < BigInt(0)));
@@ -70,6 +102,7 @@ export function describeEntry(entry: EntryWithLines): EntryView {
         categoryName: cat?.account.name,
         accountId: acc?.accountId,
         accountName: acc?.account.name,
+        ...foreignOf(acc),
       };
     }
     case "EXPENSE": {
@@ -84,11 +117,15 @@ export function describeEntry(entry: EntryWithLines): EntryView {
         accountId: acc?.accountId,
         accountName: acc?.account.name,
         paidByCard: acc?.account.type === "LIABILITY",
+        // Valued at what it cost that day (the category amount), not at what the dollars had cost.
+        ...foreignOf(acc, cat ? -cat.amount : undefined),
+        fxGain: fxGainOf(entry.lines),
       };
     }
     case "TRANSFER": {
-      const from = entry.lines.find((l) => l.amount < BigInt(0));
-      const to = entry.lines.find((l) => l.amount > BigInt(0));
+      const from = money(-1);
+      const to = money(1);
+      const toForeign = foreignOf(to);
       return {
         ...base,
         amount: Number(to?.amount ?? 0),
@@ -96,13 +133,19 @@ export function describeEntry(entry: EntryWithLines): EntryView {
         fromName: from?.account.name,
         toId: to?.accountId,
         toName: to?.account.name,
+        // Converting back is valued at what arrived; buying at what was paid.
+        ...foreignOf(from, to && !to.account.currency ? -to.amount : undefined),
+        toCurrency: toForeign.currency,
+        toForeignAmount: toForeign.foreignAmount,
+        ...(!from?.account.currency && toForeign.rate && { rate: toForeign.rate }),
+        fxGain: fxGainOf(entry.lines),
       };
     }
     case "OPENING_BALANCE": {
       // A starting balance on a money account, or a balance already owed on a card / loan.
       const acc = byType("ASSET") ?? owed;
       const amount = acc?.account.type === "LIABILITY" ? -(acc?.amount ?? BigInt(0)) : (acc?.amount ?? BigInt(0));
-      return { ...base, amount: Number(amount), accountId: acc?.accountId, accountName: acc?.account.name };
+      return { ...base, amount: Number(amount), accountId: acc?.accountId, accountName: acc?.account.name, ...foreignOf(acc) };
     }
     case "ASSET_PURCHASE": {
       const from = payer;

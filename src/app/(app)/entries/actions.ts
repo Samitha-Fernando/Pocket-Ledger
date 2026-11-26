@@ -17,6 +17,11 @@ function readEntry(fd: FormData): EntryInput | string {
   if (amount === null) return "Enter a valid amount, e.g. 1,250.50";
   const date = field(fd, "date");
   const details = field(fd, "details") || null;
+  // Foreign-currency accounts: the exchange rate, or (transfers) the amount that arrived.
+  const rate = field(fd, "rate") || null;
+  const receivedText = field(fd, "received");
+  const received = receivedText ? parseMoneyToCents(receivedText) : null;
+  if (receivedText && received === null) return "Enter a valid amount received, e.g. 315,000";
 
   switch (kind) {
     case "INCOME":
@@ -28,6 +33,7 @@ function readEntry(fd: FormData): EntryInput | string {
         categoryId: field(fd, "categoryId"),
         accountId: field(fd, "accountId"),
         loanId: field(fd, "linkedLoanId") || null,
+        rate,
       };
     case "EXPENSE":
       return {
@@ -38,11 +44,12 @@ function readEntry(fd: FormData): EntryInput | string {
         categoryId: field(fd, "categoryId"),
         accountId: field(fd, "accountId"),
         assetId: field(fd, "linkedAssetId") || null,
+        rate,
       };
     case "TRANSFER":
-      return { kind, date, amount, details, fromId: field(fd, "fromId"), toId: field(fd, "toId") };
+      return { kind, date, amount, details, fromId: field(fd, "fromId"), toId: field(fd, "toId"), received };
     case "OPENING_BALANCE":
-      return { kind, date, amount, details, accountId: field(fd, "accountId") };
+      return { kind, date, amount, details, accountId: field(fd, "accountId"), rate };
     default:
       return "Unknown transaction type.";
   }
@@ -65,12 +72,15 @@ export async function saveEntryAction(prev: EntryFormState, fd: FormData): Promi
     throw err;
   }
 
-  const summary = `${input.kind.toLowerCase().replace("_", " ")} ${formatMoney(input.amount, user.currency)} on ${input.date}`;
+  // Amounts are in the money account's currency (e.g. USD for a USD account).
+  const moneyId = input.kind === "TRANSFER" ? input.fromId : input.accountId;
+  const shownIn = (await db.account.findUnique({ where: { id: moneyId }, select: { currency: true } }))?.currency ?? user.currency;
+  const summary = `${input.kind.toLowerCase().replace("_", " ")} ${formatMoney(input.amount, shownIn)} on ${input.date}`;
   await audit(user.id, entryId ? "entry_updated" : "entry_created", summary);
   revalidatePath("/", "layout");
 
   if (entryId) redirect(await historyHref(user.id, input.date.slice(0, 7)));
-  return { success: `Saved ${formatMoney(input.amount, user.currency)}.`, savedAt: Date.now() };
+  return { success: `Saved ${formatMoney(input.amount, shownIn)}.`, savedAt: Date.now() };
 }
 
 export async function deleteEntryAction(fd: FormData) {

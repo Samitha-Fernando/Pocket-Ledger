@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { prisma } from "@/lib/db/client";
 import { getUserDb } from "@/lib/auth/session";
-import { centsToInput, formatDate, formatDateTime, formatMoney } from "@/lib/format";
+import { centsToInput, formatDate, formatDateTime, formatMoney, todayIso } from "@/lib/format";
 import type { Snapshot } from "@/lib/ledger/history";
 import { signOutAction, switchUserAction } from "../../(auth)/actions";
-import { removePin, revokeInvite, toggleUserDisabledAction } from "./actions";
+import { deleteRateAction, removePin, revokeInvite, toggleUserDisabledAction } from "./actions";
+import { formatRate } from "@/lib/ledger/fx";
 import {
   AssetThresholdForm,
   AutoLockForm,
@@ -19,6 +20,7 @@ import {
   LateIncomeForm,
   PasswordForm,
   PinForm,
+  RateForm,
   RestoreForm,
 } from "./forms";
 import { backupDir, copySubfolder, listBackups, readBackupSettings } from "@/lib/backup/local";
@@ -116,6 +118,12 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
   // Activity comes through the user-scoped client: it can only ever return this user's rows.
   const activity = await db.auditLog.findMany({ orderBy: { createdAt: "desc" }, take: 10 });
   const emptyAccount = await isEmptyAccount(db);
+  // Exchange rates: shown once there's an account in another currency (or rates already saved).
+  const [foreignAccounts, rates] = await Promise.all([
+    db.account.findMany({ where: { currency: { not: null } }, select: { currency: true } }),
+    db.exchangeRate.findMany({ orderBy: [{ date: "desc" }, { currency: "asc" }], take: 12 }),
+  ]);
+  const foreignCurrencies = [...new Set(foreignAccounts.map((a) => a.currency!))];
   // Admin only: whole-app backups and the list of people.
   const isAdmin = user.role === "ADMIN";
   const [backups, backupSettings, people] = isAdmin
@@ -219,9 +227,42 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
           <LateIncomeForm day={user.lateIncomeDay} />
         </Section>
 
-        <Section title="Currency" description="The symbol shown on amounts.">
+        <Section
+          title="Currency"
+          description="Your own currency: everything is added up in it. Changing it only changes the symbol. For money held in another currency, add a separate account (e.g. a USD account) in Accounts."
+        >
           <CurrencyForm value={user.currency} options={CURRENCIES} />
         </Section>
+
+        {(foreignCurrencies.length > 0 || rates.length > 0) && (
+          <Section
+            title="Exchange rates"
+            description={`How many ${user.currency} one unit buys. Your other-currency accounts are valued at the latest rate; rates you use on transactions are saved here too.`}
+          >
+            <div className="grid gap-4">
+              <RateForm currencies={foreignCurrencies.length ? foreignCurrencies : CURRENCIES.filter((c) => c !== user.currency)} today={todayIso(user.timezone)} base={user.currency} />
+              {rates.length > 0 && (
+                <ul className="divide-y rounded-lg border text-sm">
+                  {rates.map((r) => (
+                    <li key={r.id} className="flex items-center gap-3 px-3 py-2">
+                      <span className="w-24 tabular-nums">{r.date.split("-").reverse().join("/")}</span>
+                      <span className="w-12 font-medium">{r.currency}</span>
+                      <span className="flex-1 tabular-nums">
+                        {formatRate(r.rate4)} {user.currency}
+                      </span>
+                      <form action={deleteRateAction}>
+                        <input type="hidden" name="id" value={r.id} />
+                        <Button type="submit" variant="ghost" size="sm" className="text-muted-foreground">
+                          Remove
+                        </Button>
+                      </form>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </Section>
+        )}
 
         <Section title="Your data" description="Only your own data is included. Keep a backup somewhere safe; you can restore it later, e.g. on a server.">
           <div className="grid gap-4">

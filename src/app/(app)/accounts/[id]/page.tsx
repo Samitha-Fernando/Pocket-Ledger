@@ -9,16 +9,17 @@ import { formatIsoDate, formatMoney } from "@/lib/format";
 import { ASSET_SUBTYPES, TYPE_LABELS, naturalBalance } from "@/lib/ledger/accounts";
 import { type EntryWithLines, describeEntry } from "@/lib/ledger/describe";
 import type { AccountType } from "@/generated/prisma/client";
+import { formatRate, rateOn, toBase } from "@/lib/ledger/fx";
 import { deleteAccount, moveAccount, setArchived } from "../actions";
 import { RenameForm } from "../forms";
 
 export const metadata = { title: "Account" };
 
-/** Running balance after each line, oldest → newest; returned newest first. */
-function withRunningBalance<L extends { amount: bigint; entry: EntryWithLines }>(type: AccountType, lines: L[]) {
+/** Running balance after each line, oldest → newest; returned newest first. Foreign accounts count in their own currency. */
+function withRunningBalance<L extends { amount: bigint; foreignAmount: bigint | null; entry: EntryWithLines }>(type: AccountType, lines: L[], foreign: boolean) {
   let running = BigInt(0);
   const rows = lines.map((line) => {
-    const effect = naturalBalance(type, line.amount);
+    const effect = naturalBalance(type, foreign ? (line.foreignAmount ?? BigInt(0)) : line.amount);
     running += effect;
     return { line, effect: Number(effect), after: running, view: describeEntry(line.entry) };
   });
@@ -44,8 +45,13 @@ export default async function AccountPage({ params }: PageProps<"/accounts/[id]"
     orderBy: [{ entry: { date: "asc" } }, { entry: { createdAt: "asc" } }],
   });
 
-  const rows = withRunningBalance(account.type, lines);
+  const shownIn = account.currency ?? user.currency;
+  const rows = withRunningBalance(account.type, lines, Boolean(account.currency));
   const balance = rows[0]?.after ?? BigInt(0);
+  // Foreign-currency account: what it's worth at the latest rate, and what that money cost.
+  const rate = account.currency ? rateOn(await db.exchangeRate.findMany({ where: { currency: account.currency } }), account.currency, "9999-12-31") : null;
+  const cost = account.currency ? lines.reduce((s, l) => s + l.amount, BigInt(0)) : BigInt(0);
+  const worth = rate ? toBase(balance, rate.rate4) : null;
   const isAsset = account.type === "ASSET";
   const subtitle = isAsset ? ASSET_SUBTYPES[account.subtype as keyof typeof ASSET_SUBTYPES] : TYPE_LABELS[account.type];
 
@@ -62,8 +68,24 @@ export default async function AccountPage({ params }: PageProps<"/accounts/[id]"
         </p>
         <h1 className="text-2xl font-semibold tracking-tight">{account.name}</h1>
         <p className={`mt-1 text-3xl font-semibold tabular-nums ${balance < BigInt(0) ? "text-destructive" : ""}`}>
-          {formatMoney(balance, user.currency)}
+          {formatMoney(balance, shownIn)}
         </p>
+        {account.currency && (
+          <p className="mt-1 text-sm text-muted-foreground tabular-nums">
+            {worth !== null && rate ? (
+              <>
+                Worth <span className="font-medium text-foreground">{formatMoney(worth, user.currency)}</span> at {formatRate(rate.rate4)} ({formatIsoDate(rate.date)}) · cost{" "}
+                {formatMoney(cost, user.currency)} ·{" "}
+                <span className={worth - cost >= BigInt(0) ? "text-tone-income" : "text-tone-owe"}>
+                  {worth - cost >= BigInt(0) ? "+" : ""}
+                  {formatMoney(worth - cost, user.currency)} not yet converted
+                </span>
+              </>
+            ) : (
+              <>Cost {formatMoney(cost, user.currency)} · add an exchange rate in Settings to see what it&apos;s worth now</>
+            )}
+          </p>
+        )}
         {!isAsset && <p className="text-xs text-muted-foreground">Total of all time</p>}
       </div>
 
@@ -77,12 +99,12 @@ export default async function AccountPage({ params }: PageProps<"/accounts/[id]"
               <div key={line.id}>
                 <EntryRow
                   entry={view}
-                  currency={user.currency}
+                  currency={shownIn}
                   amountOverride={effect}
                   trailing={
                     <span className="block text-xs text-muted-foreground">
                       {formatIsoDate(view.date)}
-                      {isAsset && ` · bal ${formatMoney(after, user.currency)}`}
+                      {isAsset && ` · bal ${formatMoney(after, shownIn)}`}
                     </span>
                   }
                 />

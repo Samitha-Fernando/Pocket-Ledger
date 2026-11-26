@@ -53,7 +53,7 @@ describe("buildLines (pure)", () => {
     { kind: "OPENING_BALANCE", date: "2026-01-01", amount: -250_000, accountId: "bank" },
   ];
   it.each(cases)("$kind always balances to zero", (input) => {
-    const lines = buildLines(input, "opening");
+    const lines = buildLines(input, { openingId: "opening", currencyOf: () => null, held: () => ({ book: ZERO, foreign: ZERO }) });
     expect(sumLines(lines)).toBe(ZERO);
     expect(() => assertBalanced(lines)).not.toThrow();
   });

@@ -13,9 +13,11 @@ const TYPES = [
   { value: "EXPENSE", label: "Expense category", hint: "e.g. Pets" },
 ];
 
-export function NewAccountForm({ today }: { today: string }) {
+export function NewAccountForm({ today, baseCurrency, currencies }: { today: string; baseCurrency: string; currencies: readonly string[] }) {
   const [state, action] = useActionState(createAccount, undefined);
   const [type, setType] = useState("ASSET");
+  const [currency, setCurrency] = useState(baseCurrency);
+  const foreign = currency !== baseCurrency;
 
   return (
     <form action={action} className="grid gap-5">
@@ -51,10 +53,41 @@ export function NewAccountForm({ today }: { today: string }) {
               <option value="OTHER">Other (e.g. e-wallet)</option>
             </select>
           </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="currency">Currency</Label>
+            <select id="currency" name="currency" value={currency} onChange={(e) => setCurrency(e.target.value)} className={selectClass}>
+              {currencies.map((c) => (
+                <option key={c} value={c}>
+                  {c === baseCurrency ? `${c} (your currency)` : c}
+                </option>
+              ))}
+            </select>
+            {foreign && (
+              <p className="text-xs text-muted-foreground">
+                Its balance is kept in {currency}. Income, expenses and transfers ask for the exchange rate, and your net worth values it at the latest rate. It
+                can&apos;t be changed later.
+              </p>
+            )}
+          </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Starting balance (optional)" name="openingAmount" inputMode="decimal" placeholder="0.00" hint="What's in it on the date →" />
+            <Field
+              label={`Starting balance${foreign ? ` in ${currency}` : ""} (optional)`}
+              name="openingAmount"
+              inputMode="decimal"
+              placeholder="0.00"
+              hint="What's in it on the date →"
+            />
             <Field label="As of date" name="openingDate" type="date" defaultValue={today} />
           </div>
+          {foreign && (
+            <Field
+              label={`Exchange rate on that date (${baseCurrency} for 1 ${currency})`}
+              name="openingRate"
+              inputMode="decimal"
+              placeholder="e.g. 300.25"
+              hint="Only needed with a starting balance."
+            />
+          )}
         </>
       )}
 

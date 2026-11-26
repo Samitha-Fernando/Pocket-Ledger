@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db/client";
 import { hashSecret, newInviteCode, normalizeInviteCode, sha256, verifySecret } from "@/lib/auth/crypto";
 import { AUTO_LOCK_MAX, AUTO_LOCK_MIN, INVITE_DAYS, checkPassword, checkPin } from "@/lib/auth/policy";
-import { audit, getCurrentSession, requireAdmin, requireUser } from "@/lib/auth/session";
+import { audit, getCurrentSession, getUserDb, requireAdmin, requireUser } from "@/lib/auth/session";
 import { type FormState, checkEmail, field, normalizeEmail } from "@/lib/auth/validate";
 import { formatMoney, parseMoneyToCents } from "@/lib/format";
 import { CURRENCIES } from "@/lib/currencies";
@@ -126,6 +126,30 @@ export async function setCurrency(_prev: FormState, fd: FormData): Promise<FormS
   await prisma.user.update({ where: { id: user.id }, data: { currency } });
   revalidatePath("/", "layout");
   return { success: "Currency saved. (Amounts aren't converted; only the symbol changes.)" };
+}
+
+// ---- Exchange rates (for accounts in another currency) ----------------------------------
+
+export async function saveRateAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  const { user, db } = await getUserDb();
+  const currency = field(fd, "currency");
+  const date = field(fd, "date");
+  const { parseRate } = await import("@/lib/ledger/fx");
+  const { rememberRate } = await import("@/lib/ledger/engine");
+  const { isIsoDate } = await import("@/lib/format");
+  const rate4 = parseRate(field(fd, "rate"));
+  if (!(CURRENCIES as readonly string[]).includes(currency) || currency === user.currency) return { error: "Choose a currency." };
+  if (!isIsoDate(date)) return { error: "Choose a valid date." };
+  if (!rate4) return { error: "Enter the rate, e.g. 300.25" };
+  await db.$transaction((tx) => rememberRate(tx, currency, date, rate4));
+  revalidatePath("/", "layout");
+  return { success: `Saved. ${currency} is now valued at this rate from ${date.split("-").reverse().join("/")}.` };
+}
+
+export async function deleteRateAction(fd: FormData): Promise<void> {
+  const { db } = await getUserDb();
+  await db.exchangeRate.deleteMany({ where: { id: field(fd, "id") } });
+  revalidatePath("/", "layout");
 }
 
 // ---- Your data: restore a personal backup -------------------------------------------

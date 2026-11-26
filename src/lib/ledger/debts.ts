@@ -103,6 +103,8 @@ async function moneyAccount(tx: Tx, id: string, label: string) {
   if (!account || !isMoneyAccount(account) || account.isSystem || account.archived) {
     throw new LedgerError(`Choose a valid ${label}.`);
   }
+  // Registers keep to the user's own currency; foreign accounts are for income, expenses and transfers.
+  if (account.currency) throw new LedgerError(`${account.name} is in ${account.currency}. Use an account in your own currency here (move the money with a Transfer first).`);
   return account;
 }
 

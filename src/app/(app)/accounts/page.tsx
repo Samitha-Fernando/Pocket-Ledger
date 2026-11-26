@@ -25,6 +25,7 @@ import { ASSET_CLASSES } from "@/lib/ledger/asset-classes";
 import { monthEnd } from "@/lib/ledger/assets";
 import { DEBT_KINDS } from "@/lib/ledger/debt-kinds";
 import { LOAN_KINDS } from "@/lib/ledger/loan-kinds";
+import { formatRate } from "@/lib/ledger/fx";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Accounts" };
@@ -45,7 +46,8 @@ function iconFor(a: AccountWithBalance): LucideIcon {
   return CoinsIcon;
 }
 
-type Row = { id: string; href: string; name: string; detail?: string; balance: bigint; icon: LucideIcon; children?: Row[] };
+// `balance` is in the user's currency (a foreign account: its value now); `amountText` shows it in its own currency.
+type Row = { id: string; href: string; name: string; detail?: string; balance: bigint; amountText?: string; icon: LucideIcon; children?: Row[] };
 
 /** One compact line: icon, full name + detail, share of the section, amount. */
 function Line({ row, tone, total, currency, nested }: { row: Row; tone: Tone; total: bigint; currency: string; nested?: boolean }) {
@@ -65,7 +67,7 @@ function Line({ row, tone, total, currency, nested }: { row: Row; tone: Tone; to
         </span>
         <span className="w-8 text-right text-[11px] text-muted-foreground tabular-nums">{share >= 1 ? share.toFixed(0) : share > 0 ? "<1" : "0"}%</span>
       </span>
-      <span className={cn("shrink-0 text-right tabular-nums sm:w-32", nested ? "text-sm" : "font-semibold", row.balance < ZERO && "text-destructive")}>{formatMoney(row.balance, currency)}</span>
+      <span className={cn("shrink-0 text-right tabular-nums sm:w-32", nested ? "text-sm" : "font-semibold", row.balance < ZERO && "text-destructive")}>{row.amountText ?? formatMoney(row.balance, currency)}</span>
     </>
   );
 }
@@ -153,13 +155,20 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
   const expenses = inMonth.filter((a) => a.type === "EXPENSE" && !a.archived);
   const archived = allTime.filter((a) => a.archived && a.subtype !== FIXED_SUBTYPE && a.subtype !== LENT_SUBTYPE);
 
-  const totals = { money: sum(money), lent: sum(lent), assets: sum(fixed), owe: sum(owe) };
+  // Accounts in another currency count at today's rate.
+  const totals = { money: money.reduce((s, a) => s + a.valueNow, ZERO), lent: sum(lent), assets: sum(fixed), owe: sum(owe) };
   const owned = totals.money + totals.lent + totals.assets;
   const netWorth = owned - totals.owe;
   const hidden = [...income, ...expenses].filter((a) => a.balance === ZERO).length;
 
   const row = (a: AccountWithBalance, detail?: string): Row => ({ id: a.id, href: `/accounts/${a.id}`, name: a.name, detail, balance: a.balance, icon: iconFor(a) });
-  const moneyRows = money.map((a) => row(a, ASSET_SUBTYPES[a.subtype as keyof typeof ASSET_SUBTYPES]));
+  const moneyRows = money.map((a) => {
+    const kind = ASSET_SUBTYPES[a.subtype as keyof typeof ASSET_SUBTYPES];
+    if (!a.currency) return row(a, kind);
+    // Foreign account: shown in its currency, valued in the user's at the latest rate.
+    const worth = a.rate4 ? `≈ ${formatMoney(a.valueNow, cur)} at ${formatRate(a.rate4)}` : "no exchange rate yet";
+    return { ...row(a, `${kind} · ${a.currency} · ${worth}`), balance: a.valueNow, amountText: formatMoney(a.foreignBalance ?? ZERO, a.currency) };
+  });
   const oweRows = owe.map((a) => {
     const d = debts.find((x) => x.accountId === a.id);
     const kind = d ? DEBT_KINDS[d.kind as keyof typeof DEBT_KINDS]?.label : a.subtype === "CARD" ? "Credit card" : "Loan";

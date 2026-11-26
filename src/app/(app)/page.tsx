@@ -62,20 +62,22 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const money = (v: bigint | number) => formatMoney(v, user.currency);
 
   const end = period.to < today ? period.to : today; // "as of" date for balances
-  const [lines, accounts, upcoming] = await Promise.all([
+  const [lines, accounts, upcoming, rates] = await Promise.all([
     getReportLines(db, period.to > today ? period.to : today),
     getAccountsWithBalances(db),
     getUpcoming(db, today),
+    // Money in another currency (e.g. USD) is valued at the rate on each date.
+    db.exchangeRate.findMany({ select: { currency: true, date: true, rate4: true } }),
   ]);
 
   // ---- Numbers -------------------------------------------------------------
-  const netWorthNow = netWorthAt(lines, today);
-  const netWorthChange = netWorthAt(lines, end) - netWorthAt(lines, dayBefore(period.from));
+  const netWorthNow = netWorthAt(lines, today, rates);
+  const netWorthChange = netWorthAt(lines, end, rates) - netWorthAt(lines, dayBefore(period.from), rates);
   const f = flows(lines, period.from, period.to, lateDay);
   const kept = keptRate(f);
   const moved = movedRate(f);
   const months = trendMonths(period);
-  const series = monthlySeries(lines, months, lateDay);
+  const series = monthlySeries(lines, months, lateDay, rates);
   const chartData: MonthPoint[] = series.map((s) => ({
     label: `${SHORT_MONTHS[Number(s.month.slice(5)) - 1]}${s.month.endsWith("-01") ? ` ${s.month.slice(2, 4)}` : ""}`,
     netWorth: Number(s.netWorth),
@@ -93,7 +95,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const overBudget = budgetRows.filter((r) => r.group === "EXPENSE" && r.status === "over").sort((a, b) => Number(a.remaining - b.remaining)).slice(0, 3);
   const spendPct = budgetTotals.expense.budget > ZERO ? Number((budgetTotals.expense.actual * BigInt(1000)) / budgetTotals.expense.budget) / 10 : null;
 
-  const sum = (pick: (a: (typeof accounts)[number]) => boolean) => accounts.filter(pick).reduce((s, a) => s + a.balance, ZERO);
+  const sum = (pick: (a: (typeof accounts)[number]) => boolean) => accounts.filter(pick).reduce((s, a) => s + a.valueNow, ZERO);
   const where: { label: string; value: bigint; href: string; tone: Tone }[] = [
     { label: "Cash", value: sum((a) => a.type === "ASSET" && (a.subtype === "CASH" || a.subtype === "OTHER")), href: "/accounts", tone: "money" },
     { label: "Bank", value: sum((a) => a.type === "ASSET" && a.subtype === "BANK"), href: "/accounts", tone: "money" },

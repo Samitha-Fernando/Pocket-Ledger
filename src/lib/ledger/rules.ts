@@ -51,6 +51,7 @@ export async function validateRule(db: UserDb, input: RuleInput): Promise<RuleIn
   if (input.accountId) {
     const a = await db.account.findUnique({ where: { id: input.accountId } });
     if (!a || a.isSystem || !(appliesTo === "INCOME" ? isMoneyAccount(a) : canPayFrom(a))) throw new LedgerError("Choose a valid account.");
+    if (a.currency) throw new LedgerError("Rules can only set an account in your own currency.");
   }
   return { contains, appliesTo, categoryId: input.categoryId || null, assetId: input.assetId || null, loanId: input.loanId || null, accountId: input.accountId || null };
 }

@@ -1,5 +1,6 @@
 import type { AccountType } from "@/generated/prisma/client";
 import type { UserDb } from "@/lib/db/scoped";
+import { rateOn, toBase } from "./fx";
 
 export const ASSET_SUBTYPES = {
   CASH: "Cash",
@@ -12,7 +13,7 @@ export type AssetSubtype = keyof typeof ASSET_SUBTYPES;
 export const OPENING_BALANCES_NAME = "Opening Balances";
 
 /** Accounts the app manages itself (people can't post to them by hand). */
-export type SystemKey = "OPENING" | "DEPRECIATION" | "ASSET_GAIN" | "ASSET_LOSS" | "BAD_DEBTS";
+export type SystemKey = "OPENING" | "DEPRECIATION" | "ASSET_GAIN" | "ASSET_LOSS" | "BAD_DEBTS" | "FX_GAIN" | "FX_LOSS";
 
 /** Subtype of the ledger account behind each fixed asset. */
 export const FIXED_SUBTYPE = "FIXED";
@@ -31,6 +32,8 @@ const SYSTEM_ACCOUNTS: Seed[] = [
   { name: "Gain on assets", type: "INCOME", systemKey: "ASSET_GAIN" },
   { name: "Loss on assets", type: "EXPENSE", systemKey: "ASSET_LOSS" },
   { name: "Bad debts", type: "EXPENSE", systemKey: "BAD_DEBTS" },
+  { name: "Exchange gain", type: "INCOME", systemKey: "FX_GAIN" },
+  { name: "Exchange loss", type: "EXPENSE", systemKey: "FX_LOSS" },
   { name: OPENING_BALANCES_NAME, type: "EQUITY", systemKey: "OPENING" },
 ];
 
@@ -130,13 +133,34 @@ export async function getRawBalances(db: UserDb, range?: { from?: string; to?: s
   return new Map(rows.map((r) => [r.accountId, r._sum.amount ?? BigInt(0)]));
 }
 
-/** All accounts with their natural balances, in display order. */
+/** Foreign-currency amount held per account (optionally within a date range). */
+async function getForeignBalances(db: UserDb, range?: { from?: string; to?: string }) {
+  const date = range && (range.from || range.to) ? { date: { ...(range.from && { gte: range.from }), ...(range.to && { lte: range.to }) } } : null;
+  const rows = await db.entryLine.groupBy({ by: ["accountId"], where: { foreignAmount: { not: null }, ...(date && { entry: date }) }, _sum: { foreignAmount: true } });
+  return new Map(rows.map((r) => [r.accountId, r._sum.foreignAmount ?? BigInt(0)]));
+}
+
+/**
+ * All accounts with their natural balances, in display order. `balance` is in the user's
+ * currency (for a foreign account: what its money cost). Foreign accounts also get
+ * `foreignBalance` (in their currency) and `valueNow` (at the latest rate up to the range end);
+ * for every other account `valueNow` is the balance.
+ */
 export async function getAccountsWithBalances(db: UserDb, range?: { from?: string; to?: string }) {
-  const [accounts, raw] = await Promise.all([
+  const [accounts, raw, foreign, rates] = await Promise.all([
     db.account.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
     getRawBalances(db, range),
+    getForeignBalances(db, range),
+    db.exchangeRate.findMany({ select: { currency: true, date: true, rate4: true } }),
   ]);
-  return accounts.map((a) => ({ ...a, balance: naturalBalance(a.type, raw.get(a.id) ?? BigInt(0)) }));
+  const asOf = range?.to ?? "9999-12-31";
+  return accounts.map((a) => {
+    const balance = naturalBalance(a.type, raw.get(a.id) ?? BigInt(0));
+    if (!a.currency) return { ...a, balance, foreignBalance: null as bigint | null, valueNow: balance, rate4: null as bigint | null };
+    const held = foreign.get(a.id) ?? BigInt(0);
+    const rate = rateOn(rates, a.currency, asOf);
+    return { ...a, balance, foreignBalance: held, valueNow: rate ? toBase(held, rate.rate4) : balance, rate4: rate?.rate4 ?? null };
+  });
 }
 
 export type AccountWithBalance = Awaited<ReturnType<typeof getAccountsWithBalances>>[number];

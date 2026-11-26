@@ -8,6 +8,8 @@ import { type FormState, field } from "@/lib/auth/validate";
 import { ASSET_SUBTYPES } from "@/lib/ledger/accounts";
 import { LedgerError, saveEntry } from "@/lib/ledger/engine";
 import { isIsoDate, parseMoneyToCents } from "@/lib/format";
+import { CURRENCIES } from "@/lib/currencies";
+import { parseRate } from "@/lib/ledger/fx";
 import type { UserDb } from "@/lib/db/scoped";
 
 const EDITABLE_TYPES: AccountType[] = ["ASSET", "INCOME", "EXPENSE"];
@@ -33,6 +35,11 @@ export async function createAccount(_prev: FormState, fd: FormData): Promise<For
   const nameError = checkName(name);
   if (nameError) return { error: nameError };
   if (type === "ASSET" && !(subtype in ASSET_SUBTYPES)) return { error: "Choose the account type." };
+  // A money account can be held in another currency (e.g. a USD account); null = the user's own.
+  const chosen = field(fd, "currency") || user.currency;
+  if (type === "ASSET" && !(CURRENCIES as readonly string[]).includes(chosen)) return { error: "Choose a currency." };
+  const currency = type === "ASSET" && chosen !== user.currency ? chosen : null;
+  const rate = field(fd, "openingRate");
   if (await nameTaken(db, type, name)) return { error: `You already have "${name}".` };
 
   // Optional starting balance for "your money" accounts.
@@ -42,6 +49,7 @@ export async function createAccount(_prev: FormState, fd: FormData): Promise<For
   if (type === "ASSET") {
     if (opening === null) return { error: "Enter a valid starting balance, e.g. 25,000" };
     if (opening !== 0 && !isIsoDate(openingDate)) return { error: "Choose the date of the starting balance." };
+    if (opening !== 0 && currency && !parseRate(rate)) return { error: `Enter the exchange rate on that date (${user.currency} for 1 ${currency}).` };
   }
 
   const last = await db.account.findFirst({ where: { type }, orderBy: { sortOrder: "desc" } });
@@ -50,13 +58,14 @@ export async function createAccount(_prev: FormState, fd: FormData): Promise<For
       name,
       type,
       subtype: type === "ASSET" ? subtype : null,
+      currency,
       sortOrder: (last?.sortOrder ?? 0) + 1,
     } as never,
   });
 
   if (type === "ASSET" && opening) {
     try {
-      await saveEntry(db, { kind: "OPENING_BALANCE", date: openingDate, amount: opening, accountId: account.id });
+      await saveEntry(db, { kind: "OPENING_BALANCE", date: openingDate, amount: opening, accountId: account.id, rate: currency ? rate : null });
     } catch (err) {
       await db.account.delete({ where: { id: account.id } });
       if (err instanceof LedgerError) return { error: err.message };

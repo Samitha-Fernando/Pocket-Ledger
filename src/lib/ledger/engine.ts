@@ -1,7 +1,8 @@
 import type { Account, EntryKind } from "@/generated/prisma/client";
 import type { UserDb } from "@/lib/db/scoped";
 import { isIsoDate } from "@/lib/format";
-import { canPayFrom, isMoneyAccount } from "./accounts";
+import { canPayFrom, ensureDefaultAccounts, isMoneyAccount } from "./accounts";
+import { bookValueOut, impliedRate, parseRate, toBase } from "./fx";
 import { type ChangeAction, recordChange, snapshotEntry } from "./history";
 
 /**
@@ -12,6 +13,8 @@ import { type ChangeAction, recordChange, snapshotEntry } from "./history";
 
 export class LedgerError extends Error {}
 
+// Amounts are cents in the money account's own currency. For a foreign-currency account (e.g. USD)
+// `rate` says how many of the user's currency one unit buys (e.g. "300.25").
 export type EntryInput =
   | {
       kind: "INCOME";
@@ -21,6 +24,7 @@ export type EntryInput =
       accountId: string;
       details?: string | null;
       loanId?: string | null; // e.g. interest from a cheque exchange
+      rate?: string | null;
     }
   | {
       kind: "EXPENSE";
@@ -30,45 +34,165 @@ export type EntryInput =
       accountId: string;
       details?: string | null;
       assetId?: string | null; // e.g. a repair linked to the bike
+      rate?: string | null;
     }
-  | { kind: "TRANSFER"; date: string; amount: number; fromId: string; toId: string; details?: string | null }
+  // `amount` leaves "from" (its currency); `received` arrives in "to" when the currencies differ.
+  | { kind: "TRANSFER"; date: string; amount: number; fromId: string; toId: string; details?: string | null; received?: number | null }
   // Amount may be negative here (e.g. an overdrawn bank account).
-  | { kind: "OPENING_BALANCE"; date: string; amount: number; accountId: string; details?: string | null };
+  | { kind: "OPENING_BALANCE"; date: string; amount: number; accountId: string; details?: string | null; rate?: string | null };
 
 /** Kinds people enter with the Add form. Asset kinds are managed from the asset page. */
 export const FORM_KINDS: EntryKind[] = ["INCOME", "EXPENSE", "TRANSFER", "OPENING_BALANCE"];
 
-export type Line = { accountId: string; amount: bigint };
+// `amount` is always in the user's currency; `foreignAmount` only on lines of a foreign-currency account.
+export type Line = { accountId: string; amount: bigint; foreignAmount?: bigint | null };
+
+/** What buildLines needs to know about foreign-currency accounts. */
+export type FxContext = {
+  openingId?: string;
+  currencyOf: (accountId: string) => string | null; // null = the user's own currency
+  held: (accountId: string) => { book: bigint; foreign: bigint }; // before this entry
+  gainId?: string; // "Exchange gain" (income)
+  lossId?: string; // "Exchange loss" (expense)
+};
+
+const ZERO = BigInt(0);
+const BASE_ONLY: FxContext = { currencyOf: () => null, held: () => ({ book: ZERO, foreign: ZERO }) };
+
+/** Balances lines that don't add to zero with an exchange gain or loss line. */
+function withFx(lines: Line[], ctx: FxContext): Line[] {
+  const diff = sumLines(lines);
+  if (diff === ZERO) return lines;
+  if (!ctx.gainId || !ctx.lossId) throw new LedgerError("Exchange gain / loss accounts are missing.");
+  // diff > 0: more value arrived than the dollars had cost (gain, shown as income); diff < 0: a loss.
+  return [...lines, diff > ZERO ? { accountId: ctx.gainId, amount: -diff } : { accountId: ctx.lossId, amount: -diff }];
+}
+
+function needRate(input: { rate?: string | null }) {
+  const rate = parseRate(input.rate);
+  if (!rate) throw new LedgerError("Enter the exchange rate, e.g. 300.25");
+  return rate;
+}
+
+function needReceived(input: { received?: number | null }, currency: string | null) {
+  if (!input.received || !Number.isSafeInteger(input.received) || input.received <= 0) {
+    throw new LedgerError(`Enter the amount received${currency ? ` in ${currency}` : ""}.`);
+  }
+  return BigInt(input.received);
+}
 
 /** A transaction client: the scoped db itself, or the `tx` inside db.$transaction. */
 export type Tx = Parameters<Parameters<UserDb["$transaction"]>[0]>[0];
 
-/** Turns a form into balanced lines. Pure function: no database. */
-export function buildLines(input: EntryInput, openingBalancesId?: string): Line[] {
+/**
+ * Turns a form into balanced lines. Pure function: no database.
+ * Foreign-currency accounts: money coming in is valued at the given rate; money going out
+ * leaves at what those dollars had cost (average rate), and any difference from what it was
+ * worth is an exchange gain or loss.
+ */
+export function buildLines(input: EntryInput, ctx: FxContext = BASE_ONLY): Line[] {
   const amt = BigInt(input.amount);
+  const cur = ctx.currencyOf;
   switch (input.kind) {
-    case "INCOME":
+    case "INCOME": {
+      if (!cur(input.accountId)) {
+        return [
+          { accountId: input.categoryId, amount: -amt },
+          { accountId: input.accountId, amount: amt },
+        ];
+      }
+      const base = toBase(amt, needRate(input));
       return [
-        { accountId: input.categoryId, amount: -amt },
-        { accountId: input.accountId, amount: amt },
+        { accountId: input.categoryId, amount: -base },
+        { accountId: input.accountId, amount: base, foreignAmount: amt },
       ];
-    case "EXPENSE":
+    }
+    case "EXPENSE": {
+      if (!cur(input.accountId)) {
+        return [
+          { accountId: input.accountId, amount: -amt },
+          { accountId: input.categoryId, amount: amt },
+        ];
+      }
+      const rate = needRate(input);
+      const book = bookValueOut(ctx.held(input.accountId), amt, rate);
+      return withFx(
+        [
+          { accountId: input.accountId, amount: -book, foreignAmount: -amt },
+          { accountId: input.categoryId, amount: toBase(amt, rate) },
+        ],
+        ctx,
+      );
+    }
+    case "TRANSFER": {
+      const from = cur(input.fromId);
+      const to = cur(input.toId);
+      if (!from && !to) {
+        return [
+          { accountId: input.fromId, amount: -amt },
+          { accountId: input.toId, amount: amt },
+        ];
+      }
+      if (!from) {
+        // Buying foreign currency: the dollars cost what was paid for them.
+        const received = needReceived(input, to);
+        return [
+          { accountId: input.fromId, amount: -amt },
+          { accountId: input.toId, amount: amt, foreignAmount: received },
+        ];
+      }
+      const held = ctx.held(input.fromId);
+      if (!to) {
+        // Converting back: the difference between what arrived and what the dollars cost is a gain or loss.
+        const received = needReceived(input, null);
+        const book = bookValueOut(held, amt, impliedRate(received, amt));
+        return withFx(
+          [
+            { accountId: input.fromId, amount: -book, foreignAmount: -amt },
+            { accountId: input.toId, amount: received },
+          ],
+          ctx,
+        );
+      }
+      // Between two foreign accounts: their cost moves with them.
+      if (held.foreign <= ZERO) throw new LedgerError(`There's no ${from} in the account to move.`);
+      const book = bookValueOut(held, amt, impliedRate(held.book, held.foreign));
+      const received = from === to ? amt : needReceived(input, to);
       return [
-        { accountId: input.accountId, amount: -amt },
-        { accountId: input.categoryId, amount: amt },
+        { accountId: input.fromId, amount: -book, foreignAmount: -amt },
+        { accountId: input.toId, amount: book, foreignAmount: received },
       ];
-    case "TRANSFER":
+    }
+    case "OPENING_BALANCE": {
+      if (!ctx.openingId) throw new LedgerError("Opening Balances account is missing.");
+      if (!cur(input.accountId)) {
+        return [
+          { accountId: ctx.openingId, amount: -amt },
+          { accountId: input.accountId, amount: amt },
+        ];
+      }
+      const base = toBase(amt, needRate(input));
       return [
-        { accountId: input.fromId, amount: -amt },
-        { accountId: input.toId, amount: amt },
+        { accountId: ctx.openingId, amount: -base },
+        { accountId: input.accountId, amount: base, foreignAmount: amt },
       ];
-    case "OPENING_BALANCE":
-      if (!openingBalancesId) throw new LedgerError("Opening Balances account is missing.");
-      return [
-        { accountId: openingBalancesId, amount: -amt },
-        { accountId: input.accountId, amount: amt },
-      ];
+    }
   }
+}
+
+/** The rate a transaction used for a foreign account (to remember it), or null. */
+export function rateUsed(input: EntryInput, ctx: Pick<FxContext, "currencyOf">): { currency: string; rate4: bigint } | null {
+  if (input.kind === "TRANSFER") {
+    const from = ctx.currencyOf(input.fromId);
+    const to = ctx.currencyOf(input.toId);
+    if (!input.received || (from && to) || (!from && !to)) return null;
+    return from
+      ? { currency: from, rate4: impliedRate(BigInt(input.received), BigInt(input.amount)) }
+      : { currency: to!, rate4: impliedRate(BigInt(input.amount), BigInt(input.received)) };
+  }
+  const currency = ctx.currencyOf(input.accountId);
+  const rate4 = parseRate(input.rate);
+  return currency && rate4 ? { currency, rate4 } : null;
 }
 
 export function sumLines(lines: Line[]) {
@@ -201,12 +325,15 @@ export async function saveEntry(
   const keepArchived = new Set(existing?.lines.map((l) => l.accountId) ?? []);
   validate(input, new Map(found.map((a) => [a.id, a])), keepArchived);
 
-  const lines = buildLines(input, opening?.id);
+  const ctx = await fxContext(db, input, found, existing?.id, opening?.id);
+  const lines = buildLines(input, ctx);
   assertBalanced(lines);
+  const rate = rateUsed(input, ctx);
 
   const header = { kind: input.kind as EntryKind, date: input.date, details: input.details, assetId, loanId, importRowId: opts.importRowId };
 
   return db.$transaction(async (tx) => {
+    if (rate) await rememberRate(tx, rate.currency, input.date, rate.rate4);
     if (!existing) {
       const id = await postEntry(tx, header, lines);
       const action = opts.change?.action ?? (opts.importRowId ? "IMPORT" : "CREATE");
@@ -224,6 +351,41 @@ export async function saveEntry(
     await recordChange(tx, existing.id, opts.change?.action ?? "UPDATE", opts.change?.summary ?? "Edited", before, await snapshotEntry(tx, existing.id));
     return existing.id;
   });
+}
+
+/**
+ * For entries touching a foreign-currency account: each account's currency, what's held in it
+ * before this entry (cost and amount, up to its date), and the exchange gain / loss accounts.
+ */
+async function fxContext(db: UserDb, input: EntryInput, accounts: Account[], excludeEntryId: string | undefined, openingId?: string): Promise<FxContext> {
+  const foreign = accounts.filter((a) => a.currency);
+  if (foreign.length === 0) return { ...BASE_ONLY, openingId };
+  await ensureDefaultAccounts(db); // adds Exchange gain / loss for people set up before they existed
+  const [rows, gain, loss] = await Promise.all([
+    db.entryLine.groupBy({
+      by: ["accountId"],
+      where: { accountId: { in: foreign.map((a) => a.id) }, entry: { date: { lte: input.date } }, ...(excludeEntryId && { entryId: { not: excludeEntryId } }) },
+      _sum: { amount: true, foreignAmount: true },
+    }),
+    db.account.findFirst({ where: { systemKey: "FX_GAIN" } }),
+    db.account.findFirst({ where: { systemKey: "FX_LOSS" } }),
+  ]);
+  const currency = new Map(accounts.map((a) => [a.id, a.currency ?? null]));
+  const held = new Map(rows.map((r) => [r.accountId, { book: r._sum.amount ?? ZERO, foreign: r._sum.foreignAmount ?? ZERO }]));
+  return {
+    openingId,
+    currencyOf: (id) => currency.get(id) ?? null,
+    held: (id) => held.get(id) ?? { book: ZERO, foreign: ZERO },
+    gainId: gain?.id,
+    lossId: loss?.id,
+  };
+}
+
+/** Keeps the rate a transaction used, so it's offered next time and values the account. */
+export async function rememberRate(tx: Tx, currency: string, date: string, rate4: bigint) {
+  const existing = await tx.exchangeRate.findFirst({ where: { currency, date } });
+  if (existing) await tx.exchangeRate.update({ where: { id: existing.id }, data: { rate4 } });
+  else await tx.exchangeRate.create({ data: { currency, date, rate4 } as never });
 }
 
 /** Deletes an entry made with the Add form. Asset entries are removed via the asset page. */

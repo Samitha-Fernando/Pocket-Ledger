@@ -2,6 +2,35 @@
 
 All notable changes, in plain English. Newest first.
 
+## Phase 9: USD accounts (2026-11-26)
+
+### Added
+- **Accounts in another currency** (e.g. a USD account): choose the currency when adding a "your
+  money" account. Its balance is kept in dollars; everything else stays in rupees.
+- **Income, expenses and transfers in USD**: pick the USD account and the form switches to dollars,
+  asks for the exchange rate (your latest rate is filled in) and shows the rupee value.
+- **Converting dollars**: a transfer from the USD account to a rupee account asks for the amount
+  received. The difference from what those dollars cost (average rate) is recorded automatically as
+  an **Exchange gain** (income) or **Exchange loss** (expense). Buying dollars works the same way.
+- **Settings → Exchange rates**: enter a rate any day; rates used on transactions are saved too.
+- **Valued at today's rate**: Accounts, the account page, Home net worth and its trend value dollars
+  at the latest rate; the account page also shows what they cost and the gain not yet converted.
+- **Budgets and savings rate**: salary paid straight into a USD *savings* account counts as saved,
+  on that savings line.
+- Exports show the other-currency side; personal backups include currencies and rates.
+- Demo: a "USD savings" account with dollar income and a conversion.
+- 15 new tests (163 total): rates and rounding, average cost, gains and losses, the full
+  salary-then-convert round trip, editing a conversion, reports, and backup / restore.
+
+### Fixed
+- The Add transaction form no longer jumps back to the first account after saving (React reset the
+  lists while the form kept the chosen account, so the next save could go to the wrong account).
+
+### Notes
+- Assets, lending, cards & loans, the Excel import and rules stay in rupees: move dollars with a
+  Transfer first. Exchange gains are worked out when a conversion is saved; changing an older USD
+  transaction later doesn't recalculate conversions made after it.
+
 ## Professional look, part B (2026-11-25)
 
 ### Added

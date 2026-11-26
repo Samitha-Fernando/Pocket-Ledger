@@ -2,6 +2,7 @@ import type { UserDb } from "@/lib/db/scoped";
 import { isIsoDate, shiftMonth } from "@/lib/format";
 import { monthEnd } from "./assets";
 import { getDebts } from "./debts";
+import { type Rate, rateOn, toBase } from "./fx";
 import { getLoans } from "./loans";
 
 /**
@@ -83,6 +84,8 @@ export type ReportLine = {
   subtype: string | null;
   systemKey: string | null;
   name: string;
+  currency: string | null; // foreign-currency account (e.g. USD)
+  foreignAmount: bigint | null; // the line in that currency
 };
 
 /** Every ledger line up to a date, with the bits reports need. */
@@ -92,8 +95,9 @@ export async function getReportLines(db: UserDb, upTo: string): Promise<ReportLi
     select: {
       amount: true,
       accountId: true,
+      foreignAmount: true,
       entry: { select: { date: true, kind: true } },
-      account: { select: { type: true, subtype: true, systemKey: true, name: true } },
+      account: { select: { type: true, subtype: true, systemKey: true, name: true, currency: true } },
     },
   });
   return lines.map((l) => ({
@@ -105,6 +109,8 @@ export async function getReportLines(db: UserDb, upTo: string): Promise<ReportLi
     subtype: l.account.subtype,
     systemKey: l.account.systemKey,
     name: l.account.name,
+    currency: l.account.currency,
+    foreignAmount: l.foreignAmount,
   }));
 }
 
@@ -137,6 +143,8 @@ export function flows(lines: ReportLine[], from: string, to: string, lateIncomeD
       out.expenses += l.amount;
       if (l.systemKey === "DEPRECIATION") out.depreciation += l.amount;
     } else if (l.kind === "TRANSFER" && l.subtype === "SAVINGS") out.movedToSavings += l.amount;
+    // Income kept in a foreign-currency savings account (e.g. a USD salary) counts as saved.
+    else if (l.kind === "INCOME" && l.subtype === "SAVINGS" && l.currency) out.movedToSavings += l.amount;
   }
   return out;
 }
@@ -151,15 +159,36 @@ export function movedRate(f: Pick<Flows, "income" | "movedToSavings">) {
   return f.income > ZERO ? Number((f.movedToSavings * BigInt(10_000)) / f.income) / 100 : null;
 }
 
-/** Net worth (what you own − what you owe) at the end of a date. Pure. */
-export function netWorthAt(lines: ReportLine[], date: string) {
+/**
+ * How much more (or less) foreign-currency money is worth at the rate on a date than it cost.
+ * Added to net worth so dollars are valued at the latest rate. Pure.
+ */
+export function fxAdjustment(lines: ReportLine[], rates: Rate[], date: string) {
+  const held = new Map<string, { currency: string; book: bigint; foreign: bigint }>();
+  for (const l of lines) {
+    if (!l.currency || l.foreignAmount === null || l.date > date) continue;
+    const h = held.get(l.accountId) ?? { currency: l.currency, book: ZERO, foreign: ZERO };
+    h.book += l.amount;
+    h.foreign += l.foreignAmount;
+    held.set(l.accountId, h);
+  }
+  let adjust = ZERO;
+  for (const h of held.values()) {
+    const rate = rateOn(rates, h.currency, date);
+    if (rate) adjust += toBase(h.foreign, rate.rate4) - h.book;
+  }
+  return adjust;
+}
+
+/** Net worth (what you own − what you owe) at the end of a date, foreign money at that date's rate. Pure. */
+export function netWorthAt(lines: ReportLine[], date: string, rates: Rate[] = []) {
   let total = ZERO;
   for (const l of lines) if (l.date <= date && (l.type === "ASSET" || l.type === "LIABILITY")) total += l.amount;
-  return total;
+  return total + (rates.length ? fxAdjustment(lines, rates, date) : ZERO);
 }
 
 /** Month-by-month income, expenses, savings rate and month-end net worth. Pure. */
-export function monthlySeries(lines: ReportLine[], months: string[], lateIncomeDay: number | null) {
+export function monthlySeries(lines: ReportLine[], months: string[], lateIncomeDay: number | null, rates: Rate[] = []) {
   // Net worth: running total of asset & liability lines, sorted once.
   const balanceLines = lines.filter((l) => l.type === "ASSET" || l.type === "LIABILITY").sort((a, b) => a.date.localeCompare(b.date));
   let i = 0;
@@ -168,7 +197,8 @@ export function monthlySeries(lines: ReportLine[], months: string[], lateIncomeD
     const end = monthEnd(month);
     while (i < balanceLines.length && balanceLines[i].date <= end) running += balanceLines[i++].amount;
     const f = flows(lines, `${month}-01`, end, lateIncomeDay);
-    return { month, ...f, netWorth: running, kept: keptRate(f), moved: movedRate(f) };
+    const netWorth = running + (rates.length ? fxAdjustment(lines, rates, end) : ZERO);
+    return { month, ...f, netWorth, kept: keptRate(f), moved: movedRate(f) };
   });
 }
 
