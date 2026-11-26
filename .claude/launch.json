@@ -24,6 +24,20 @@
       "port": 3100
     },
     {
+      "name": "demo-preview-3100",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "cross-env",
+        "DATABASE_URL=file:./data/demo.db",
+        "NEXT_DIST_DIR=.next-preview",
+        "next",
+        "start",
+        "-p",
+        "3100"
+      ],
+      "port": 3100
+    },
+    {
       "name": "dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": [

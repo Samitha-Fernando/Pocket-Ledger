@@ -13,6 +13,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Claude Design sync build output (git-ignored)
+    "ds-bundle/**",
+    ".ds-sync/**",
   ]),
 ]);
 

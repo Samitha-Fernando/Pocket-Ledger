@@ -150,9 +150,9 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           icon={LandmarkIcon}
           value={money(netWorthNow)}
           sub={
-            <span className={cn("inline-flex items-center gap-0.5", netWorthChange >= ZERO ? TONES.income.text : TONES.owe.text)}>
-              {netWorthChange >= ZERO ? <ArrowUpRightIcon className="size-3.5" /> : <ArrowDownRightIcon className="size-3.5" />}
-              {money(netWorthChange)} in {PERIODS[period.key].toLowerCase()}
+            <span className={netWorthChange >= ZERO ? TONES.income.text : TONES.owe.text}>
+              {netWorthChange >= ZERO ? <ArrowUpRightIcon className="mr-0.5 inline size-3.5 align-[-2px]" /> : <ArrowDownRightIcon className="mr-0.5 inline size-3.5 align-[-2px]" />}
+              <span className="whitespace-nowrap">{money(netWorthChange)}</span> in {PERIODS[period.key].toLowerCase()}
             </span>
           }
         />

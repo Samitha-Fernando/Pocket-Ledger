@@ -50,7 +50,7 @@ export function StatTile({
       <span className={cn("mt-2 block truncate text-lg font-semibold tracking-tight tabular-nums sm:text-xl 2xl:text-2xl", valueClassName)} title={value}>
         {value}
       </span>
-      {sub && <span className="mt-0.5 block truncate text-xs text-muted-foreground">{sub}</span>}
+      {sub && <span className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{sub}</span>}
     </>
   );
   const className = cn("block min-w-0 rounded-xl border bg-card p-3.5 shadow-xs", extra);

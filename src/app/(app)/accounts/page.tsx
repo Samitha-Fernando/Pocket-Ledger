@@ -252,8 +252,8 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
                 <span className={cn("size-2.5 shrink-0 rounded-sm", TONES[p.tone].bar)} />
                 {p.label}
               </dt>
-              <dd className="mt-0.5 flex items-baseline gap-2">
-                <span className="font-semibold tabular-nums">{formatMoney(p.value, cur)}</span>
+              <dd className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
+                <span className="font-semibold whitespace-nowrap tabular-nums">{formatMoney(p.value, cur)}</span>
                 <span className="text-xs text-muted-foreground tabular-nums">{pct(p.value, owned).toFixed(0)}%</span>
               </dd>
             </div>
