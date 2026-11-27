@@ -1,6 +1,6 @@
 # Pocket Ledger: notes for Claude
 
-Full product brief: `docs/PROJECT_BRIEF.md`. The owner is not a developer.
+Full product brief: `docs/PROJECT_BRIEF.md`. Explain things to the owner in plain English.
 
 ## Working agreement
 - Build in phases (see brief §12). Before a phase: short plain-English plan, wait for OK.

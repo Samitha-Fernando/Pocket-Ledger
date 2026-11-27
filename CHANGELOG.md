@@ -158,8 +158,7 @@ to use every day on this laptop instead.
   out like the real one, preview/replace on import, privacy.
 
 ### Checked
-- The real spreadsheet's Budget Planning sheet reads as 21 lines across 2025–2027
-  (labels and counts only; nothing was copied or saved).
+- A real Budget Planning sheet reads correctly (checked privately; nothing was copied or saved).
 
 ## Phase 6: Dashboard & reports (2026-10-20)
 
@@ -231,8 +230,8 @@ to use every day on this laptop instead.
 - 15 new tests (111 total) using a fake workbook laid out like the real one.
 
 ### Checked
-- Dry run of the real spreadsheet into a throwaway database: 855 rows read, 854
-  posted (1 blank amount skipped), 0 errors, every category total matches, 0
+- Dry run of a real spreadsheet into a throwaway database: all rows read and
+  posted (blank amounts skipped), 0 errors, every category total matches, 0
   unbalanced transactions, no account below zero with a starting balance of 0,
   undo removed everything.
 

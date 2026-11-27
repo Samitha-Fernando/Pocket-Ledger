@@ -7,8 +7,7 @@ income, expenses, cash in hand, bank and savings balances, assets I buy, money I
 lend or invest and the income it earns, and money I owe — and show my real
 net worth at any point in time.
 
-I am not a developer. I'm a supply chain professional learning to build with
-Claude Code. Build in small, working increments, explain what you built in plain
+Build in small, working increments, explain what you built in plain
 English after each step, and stop at the end of each phase so I can test and
 commit before moving on.
 
@@ -21,7 +20,7 @@ a simple form and the app writes both sides.
 ### Account types
 | Type | Examples |
 |---|---|
-| Asset | Cash in hand, bank account(s), savings account, AIA emergency fund, money lent out (one per borrower/cheque), investments, fixed assets (bike, phone, laptop…) |
+| Asset | Cash in hand, bank account(s), savings account, emergency fund, money lent out (one per borrower/cheque), investments, fixed assets (bike, phone, laptop…) |
 | Liability | Credit cards, pawning loan, other loans |
 | Income | Employment (Net), Bank Interest, Cheque Exchange Interest, side sales, gain on asset sale |
 | Expense | Food, Utilities, Groceries, Transportation, Clothing, Medicine, Body Care, Fun & vacation, Gift, Gym, Education, Assets Repairs and maintenance, Depreciation, Interest paid, Loss on asset sale, Other |
@@ -63,7 +62,7 @@ Balances are **always calculated from transactions**, never typed in.
 
 ## 4. Lending & investments register
 
-I lend money via cheque exchange to people (e.g. Rs 100,000 at 4%) and earn interest.
+Money can be lent to people or invested (e.g. Rs 100,000 at 4%) to earn interest.
 - Each loan/investment: counterparty, principal, start date, rate/expected return,
   due date, status, notes.
 - Interest receipts and principal repayments link to it.
@@ -78,7 +77,7 @@ the liability (it is NOT an expense).
 
 ## 6. Users, login & privacy (required from Phase 0)
 
-- **Multiple users, fully separate data.** E.g. husband and wife on the same desktop
+- **Multiple users, fully separate data.** E.g. two people on the same computer
   each have their own login and see only their own data. Every record belongs to a
   user and every query is scoped by user — enforce this server-side.
 - Login with **email/username + password**. After first login on a device, allow a
@@ -118,16 +117,16 @@ the liability (it is NOT an expense).
 - Provide a **demo seed** with realistic fake data so I can record videos without
   showing my real finances.
 
-## 9. Import my existing Excel history
+## 9. Import existing Excel history
 
-Source file: `Personal_Budget_Tracker_V1.1.xlsx`
+Source: a budget spreadsheet laid out like this:
 - Sheet **"Budget Tracking"**, Excel table `Tracking`, header row 11, columns
   C–G: `Date | Type | Category | Amount | Details` (H = running balance, I = effective
-  date — both calculated, ignore on import). ~830 rows, Dec 2024 → present.
+  date — both calculated, ignore on import).
 - `Type` is one of `Income`, `Expenses`, `Savings`. Some `Amount` cells are formulas
   (e.g. `=12000+24000+8000+7500`) — use the computed value.
 - Sheet **"Budget Planning"**: monthly budget per category (import in Phase 7).
-- Setting in my sheet: income received on/after the **25th** counts toward next
+- Optional setting: income received on/after the **25th** counts toward next
   month ("late income shift"). Keep this as a per-user setting for reports.
 
 ### Import flow
@@ -135,7 +134,7 @@ Source file: `Personal_Budget_Tracker_V1.1.xlsx`
 2. Default mapping, editable before posting:
    - `Income/*` → Income received (into a default bank account I choose)
    - `Expenses/<category>` → Expense paid
-   - `Savings/Savings Account`, `Savings/Emergency Fund (AIA Insurance)` → **Transfer**
+   - `Savings/Savings Account`, `Savings/Emergency Fund` → **Transfer**
      to that savings account (not an expense)
    - `Expenses/Debt` → **Liability payment** (I'll pick which liability)
    - `Expenses/Asset Purchases` → flagged for review: asset or expense
